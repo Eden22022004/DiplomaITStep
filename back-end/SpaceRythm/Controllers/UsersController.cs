@@ -1,0 +1,107 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SpaceRythm.Entities;
+using SpaceRythm.Data;
+using SpaceRythm.Attributes;
+using SpaceRythm.Interfaces;
+using SpaceRythm.Models.User;
+
+
+namespace SpaceRythm.Controllers;
+
+public class UsersController : ControllerBase
+{
+    //private readonly MyDbContext _context; 
+
+    //public UsersController(MyDbContext context)
+    //{
+    //    _context = context; // Ініціалізація контексту
+    //}
+
+    //[HttpGet]
+    //[Route("api/users")]
+    //public IActionResult GetUsers()
+    //{
+    //    var users = _context.Users.ToList();
+    //    return Ok(users);
+    //}
+
+    private readonly IUserService _userService;
+
+    public UsersController(IUserService userService)
+    {
+        _userService = userService;
+    }
+
+    [Admin]
+    [HttpGet("/api/[controller]")]
+    public async Task<IEnumerable<User>> Get()
+    {
+        return await _userService.GetAll();
+    }
+
+    [HttpPost("/api/[controller]")]
+    public async Task<IActionResult> Create(CreateUserRequest req)
+    {
+        try
+        {
+            var res = await _userService.Create(req);
+            return Ok(res);
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { message = e.Message });
+        }
+    }
+
+    [HttpPost("/api/[controller]/authenticate")]
+    public async Task<IActionResult> Authenticate(AuthenticateRequest req)
+    {
+        var res = await _userService.Authenticate(req);
+
+        if (res == null)
+            return BadRequest(new { message = "Username or password incorrect" });
+
+        return Ok(res);
+    }
+
+    [HttpPost("/api/user/isAdmin")]
+    public bool IsAdmin()
+    {
+        var user = (User)HttpContext.Items["User"];
+
+        Console.WriteLine(user);
+
+        if (user == null)
+            return false;
+
+        return user.IsAdmin;
+    }
+
+    [SpaceRythm.Attributes.Authorize]
+    [HttpPut("/api/user")]
+    public async Task<UpdateUserResponse> Update(UpdateUserRequest req)
+    {
+        var user = (User)HttpContext.Items["User"];
+        var res = await _userService.Update(user.Id.ToString(), req);
+        return res;
+    }
+
+    [SpaceRythm.Attributes.Authorize]
+    [HttpDelete("/api/user")]
+    public async Task<IActionResult> Delete()
+    {
+        var user = (User)HttpContext.Items["User"];
+        await _userService.Delete(user.Id.ToString());
+        return Ok();
+    }
+
+    [Admin]
+    [HttpDelete("/api/user/{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        await _userService.Delete(id);
+        return Ok();
+    }
+}
+
