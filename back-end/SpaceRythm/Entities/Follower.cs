@@ -16,5 +16,5 @@ public class Follower
 
     // Навігаційні властивості
     public User User { get; set; }
-    public User FollowedUser { get; set; }
+    public User FollowedUser { get; set; } // Користувач, на якого підписалися
 }

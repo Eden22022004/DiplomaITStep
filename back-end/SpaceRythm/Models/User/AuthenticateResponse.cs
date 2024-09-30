@@ -2,7 +2,7 @@
 
 public class AuthenticateResponse
 {
-    public string Id { get; set; }
+    public int Id { get; set; }
     public string Username { get; set; }
     public string Email { get; set; }
     public string JwtToken { get; set; }
@@ -17,7 +17,7 @@ public class AuthenticateResponse
 
     public AuthenticateResponse(Entities.User user, string token)
     {
-        Id = user.Id.ToString();
+        Id = user.Id;
         Username = user.Username;
         Email = user.Email;
         JwtToken = token;
