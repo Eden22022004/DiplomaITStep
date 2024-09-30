@@ -42,8 +42,8 @@ public class User
     public DateTime DateJoined { get; set; } = DateTime.UtcNow; 
 
     [MaxLength(50)]
-    [Column("oauth_provider")] 
-    public string OAuthProvider { get; set; }
+    [Column("oauth_provider")]
+    public string? OAuthProvider { get; set; }
 
     [Column("is_email_confirmed")]
     public bool IsEmailConfirmed { get; set; } = false; // Значення за замовчуванням
