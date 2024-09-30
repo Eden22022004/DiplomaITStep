@@ -20,6 +20,11 @@ public interface IUserService
 
     Task<UpdateUserResponse> Update(string id, UpdateUserRequest req);
 
-    Task Delete(string id);
+    Task<string> UploadAvatar(int userId, string avatarPath);
+    Task FollowUser(int followerId, int followeeId);
+    Task<IEnumerable<User>> GetFollowers(int userId);
+    Task ChangePassword(int userId, ChangePasswordRequest request);
+
+    Task Delete(int id);
 }
 

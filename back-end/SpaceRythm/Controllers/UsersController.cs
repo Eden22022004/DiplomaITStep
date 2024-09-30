@@ -5,27 +5,13 @@ using SpaceRythm.Data;
 using SpaceRythm.Attributes;
 using SpaceRythm.Interfaces;
 using SpaceRythm.Models.User;
+using Org.BouncyCastle.Ocsp;
 
 
 namespace SpaceRythm.Controllers;
 
 public class UsersController : ControllerBase
 {
-    //private readonly MyDbContext _context; 
-
-    //public UsersController(MyDbContext context)
-    //{
-    //    _context = context; // Ініціалізація контексту
-    //}
-
-    //[HttpGet]
-    //[Route("api/users")]
-    //public IActionResult GetUsers()
-    //{
-    //    var users = _context.Users.ToList();
-    //    return Ok(users);
-    //}
-
     private readonly IUserService _userService;
 
     public UsersController(IUserService userService)
@@ -33,13 +19,58 @@ public class UsersController : ControllerBase
         _userService = userService;
     }
 
-    [Admin]
-    [HttpGet("/api/[controller]")]
-    public async Task<IEnumerable<User>> Get()
+    // Get users
+    [HttpGet]
+    [Route("api/users")]
+    public async Task<IActionResult> GetAllUsers()
     {
-        return await _userService.GetAll();
+        var users = await _userService.GetAll();
+        return Ok(users);
     }
 
+    // Admin-досту, щоб get all users
+    [Admin]
+    [HttpGet("/api/[controller]")]
+    public async Task<IActionResult> Get()
+    {
+        var users = await _userService.GetAll();
+        return Ok(users);
+    }
+
+    // Отримати конкретного user по id
+    [HttpGet("/api/users/{id}")]
+    public async Task<IActionResult> GetUserById(string id)
+    {
+        var user = await _userService.GetById(id);
+        if (user == null)
+            return NotFound(new { message = "User not found" });
+        return Ok(user);
+    }
+
+    // Отримати конкретного user по username
+    [HttpGet("/api/users/by-username/{username}")]
+    public async Task<IActionResult> GetByUsername(string username)
+    {
+        var user = await _userService.GetByUsername(username);
+        if (user == null)
+            return NotFound(new { message = "User not found" });
+
+        return Ok(user);
+    }
+
+    // Отримати конкретного user по username
+    [HttpGet("/api/users/by-email/{email}")]
+    public async Task<IActionResult> GetByEmail(string email)
+    {
+        var user = await _userService.GetByEmail(email);
+        if (user == null)
+            return NotFound(new { message = "User not found" });
+
+        return Ok(user);
+    }
+
+
+    // Create a new user
     [HttpPost("/api/[controller]")]
     public async Task<IActionResult> Create(CreateUserRequest req)
     {
@@ -54,6 +85,42 @@ public class UsersController : ControllerBase
         }
     }
 
+    // Завантаження профілю зображення
+    [HttpPost("/api/user/upload-avatar")]
+    public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
+    {
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return BadRequest(new { message = "User not found" });
+
+        // Проверка на наличие файла
+        if (avatar == null || avatar.Length == 0)
+            return BadRequest(new { message = "Invalid avatar file" });
+
+        // Путь для сохранения аватара
+        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
+
+        // Создаем папку, если ее нет
+        if (!Directory.Exists(uploadsFolder))
+            Directory.CreateDirectory(uploadsFolder);
+
+        // Генерируем уникальное имя для файла
+        var uniqueFileName = $"{Guid.NewGuid()}_{avatar.FileName}";
+        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+        // Сохраняем файл на сервере
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await avatar.CopyToAsync(stream);
+        }
+
+        // Обновляем аватар пользователя в базе данных
+        var avatarPath = await _userService.UploadAvatar(user.Id, uniqueFileName);
+
+        return Ok(new { avatarPath });
+    }
+
+    // Authenticate a user
     [HttpPost("/api/[controller]/authenticate")]
     public async Task<IActionResult> Authenticate(AuthenticateRequest req)
     {
@@ -65,43 +132,84 @@ public class UsersController : ControllerBase
         return Ok(res);
     }
 
+    // Перевірка, чи поточний user is an admin
     [HttpPost("/api/user/isAdmin")]
-    public bool IsAdmin()
+    public IActionResult IsAdmin()
     {
-        var user = (User)HttpContext.Items["User"];
-
-        Console.WriteLine(user);
+        var user = HttpContext.Items["User"] as User;
 
         if (user == null)
-            return false;
+            return BadRequest(new { message = "User not found" });
 
-        return user.IsAdmin;
+        return Ok(user.IsAdmin);
     }
 
+    // Update інформації користувача тільки authorized може)
     [SpaceRythm.Attributes.Authorize]
     [HttpPut("/api/user")]
-    public async Task<UpdateUserResponse> Update(UpdateUserRequest req)
+    public async Task<IActionResult> Update(UpdateUserRequest req)
     {
-        var user = (User)HttpContext.Items["User"];
+        var user = HttpContext.Items["User"] as User;
+
+        if (user == null)
+            return BadRequest(new { message = "User not found" });
+
         var res = await _userService.Update(user.Id.ToString(), req);
-        return res;
+        return Ok(res);
     }
 
+    // Підписка до іншого користувача для отримання оновлень від нього
+    [HttpPost("/api/users/{id}/follow")]
+    public async Task<IActionResult> FollowUser(int id)
+    {
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return BadRequest(new { message = "User not found" });
+
+        await _userService.FollowUser(user.Id, id);
+        return Ok(new { message = "Successfully followed the user." });
+    }
+
+    // Список підписників користувача
+    [HttpGet("/api/users/{id}/followers")]
+    public async Task<IActionResult> GetFollowers(int id)
+    {
+        var followers = await _userService.GetFollowers(id);
+        return Ok(followers);
+    }
+
+    // Зміна пароля користувача
+    [HttpPost("/api/user/change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
+    {
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return BadRequest(new { message = "User not found" });
+
+        await _userService.ChangePassword(user.Id, req);
+        return Ok(new { message = "Password successfully changed." });
+    }
+
+    // Delete поточного користувача
     [SpaceRythm.Attributes.Authorize]
     [HttpDelete("/api/user")]
     public async Task<IActionResult> Delete()
     {
-        var user = (User)HttpContext.Items["User"];
-        await _userService.Delete(user.Id.ToString());
+        var user = HttpContext.Items["User"] as User;
+
+        if (user == null)
+            return BadRequest(new { message = "User not found" });
+
+        await _userService.Delete(user.Id);
         return Ok();
     }
 
+    // Admin-доступ, щоб видалити користувача за id
     [Admin]
     [HttpDelete("/api/user/{id}")]
-    public async Task<IActionResult> Delete(string id)
+    public async Task<IActionResult> Delete(int id)
     {
         await _userService.Delete(id);
         return Ok();
     }
 }
-
