@@ -9,6 +9,7 @@ using SpaceRythm.Models;
 using SpaceRythm.Util;
 using Microsoft.Extensions.Options;
 using SpaceRythm.Exceptions;
+using SpaceRythm.DTOs;
 
 namespace SpaceRythm.Services
 {
@@ -56,11 +57,14 @@ namespace SpaceRythm.Services
 
         public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest req)
         {
+            Console.WriteLine($"Attempting to authenticate user with username: {req.Username}");
+
             // Step 1: Find user by email or username
             //var user = await _context.Users.SingleOrDefaultAsync(u => u.Email == req.Email || u.Username == req.Username);
             var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == req.Username);
             if (user == null)
             {
+                Console.WriteLine($"User with username {req.Username} not found.");
                 // Return null or throw an error if the user is not found
                 throw new Exception("User not found");
             }
@@ -68,13 +72,14 @@ namespace SpaceRythm.Services
             // Step 2: Verify the password
             if (!PasswordHash.Verify(req.Password, user.Password))
             {
+                Console.WriteLine($"Invalid password for user {req.Username}.");
                 // Password is incorrect
                 throw new Exception("Invalid password");
             }
-
+            Console.WriteLine($"Password verification succeeded for user {req.Username}. Generating JWT token...");
             // Step 3: Generate JWT token
             string token = Jwt.GenerateToken(_jwtSettings, user);
-
+            Console.WriteLine($"JWT token generated successfully for user {req.Username}.");
             // Step 4: Return AuthenticateResponse with user data and token
             return new AuthenticateResponse(user, token);
         }
@@ -158,12 +163,21 @@ namespace SpaceRythm.Services
         }
 
         // 3. Get Followers
-        public async Task<IEnumerable<User>> GetFollowers(int followedUserId)
+        public async Task<IEnumerable<FollowerDto>> GetFollowers(int followedUserId)
         {
-            return await _context.Followers
-                .Where(f => f.FollowedUserId == followedUserId) // Використовуємо FollowedUserId для фільтрації
-                .Select(f => f.User) // Отримуємо об'єкт User для кожного Follower
+            // Отримуємо всіх підписників для конкретного користувача і додаткову інформацію про них
+            var followers = await _context.Followers
+                .Where(f => f.FollowedUserId == followedUserId)
+                .Select(f => new FollowerDto
+                {
+                    Id = f.UserId,                     // ID підписника
+                    Username = f.User.Username,        // Ім'я користувача підписника
+                    Avatar = f.User.ProfileImage,      // URL аватара підписника
+                    FollowDate = f.FollowDate          // Дата підписки
+                })
                 .ToListAsync();
+
+            return followers;
         }
 
         // 4. Change Password

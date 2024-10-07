@@ -1,4 +1,5 @@
-﻿using SpaceRythm.Entities;
+﻿using SpaceRythm.DTOs;
+using SpaceRythm.Entities;
 using SpaceRythm.Models.User;
 
 
@@ -22,7 +23,7 @@ public interface IUserService
 
     Task<string> UploadAvatar(int userId, string avatarPath);
     Task FollowUser(int followerId, int followeeId);
-    Task<IEnumerable<User>> GetFollowers(int userId);
+    Task<IEnumerable<FollowerDto>> GetFollowers(int userId);
     Task ChangePassword(int userId, ChangePasswordRequest request);
 
     Task Delete(int id);
