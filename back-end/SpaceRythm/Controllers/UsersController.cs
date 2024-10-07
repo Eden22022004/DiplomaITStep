@@ -6,10 +6,14 @@ using SpaceRythm.Attributes;
 using SpaceRythm.Interfaces;
 using SpaceRythm.Models.User;
 using Org.BouncyCastle.Ocsp;
+using SpaceRythm.DTOs;
 
 
 namespace SpaceRythm.Controllers;
 
+
+[ApiController]
+[Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -21,7 +25,7 @@ public class UsersController : ControllerBase
 
     // Get users
     [HttpGet]
-    [Route("api/users")]
+    //[Route("api/users")]
     public async Task<IActionResult> GetAllUsers()
     {
         var users = await _userService.GetAll();
@@ -29,16 +33,17 @@ public class UsersController : ControllerBase
     }
 
     // Admin-досту, щоб get all users
-    [Admin]
-    [HttpGet("/api/[controller]")]
-    public async Task<IActionResult> Get()
-    {
-        var users = await _userService.GetAll();
-        return Ok(users);
-    }
+    //[Admin]
+    //[HttpGet("/api/[controller]")]
+    //public async Task<IActionResult> Get()
+    //{
+    //    var users = await _userService.GetAll();
+    //    return Ok(users);
+    //}
 
     // Отримати конкретного user по id
-    [HttpGet("/api/users/{id}")]
+    //[HttpGet("/api/users/{id}")]
+    [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(string id)
     {
         var user = await _userService.GetById(id);
@@ -48,7 +53,8 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
-    [HttpGet("/api/users/by-username/{username}")]
+    //[HttpGet("/api/users/by-username/{username}")]
+    [HttpGet("by-username/{username}")]
     public async Task<IActionResult> GetByUsername(string username)
     {
         var user = await _userService.GetByUsername(username);
@@ -59,7 +65,8 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
-    [HttpGet("/api/users/by-email/{email}")]
+    //[HttpGet("/api/users/by-email/{email}")]
+    [HttpGet("by-email/{email}")]
     public async Task<IActionResult> GetByEmail(string email)
     {
         var user = await _userService.GetByEmail(email);
@@ -71,22 +78,52 @@ public class UsersController : ControllerBase
 
 
     // Create a new user
-    [HttpPost("/api/[controller]")]
+    //[HttpPost("/api/[controller]")]
+    //[HttpPost]
+    //public async Task<IActionResult> Create(CreateUserRequest req)
+    //{
+
+    //    try
+    //    {
+    //        var res = await _userService.Create(req);
+    //        return Ok(res);
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        return BadRequest(new { message = e.Message });
+    //    }
+    //}
+
+    [HttpPost]
     public async Task<IActionResult> Create(CreateUserRequest req)
     {
+        // Логування отриманих даних
+        Console.WriteLine($"Received data: Email={req.Email}, Username={req.Username}, Password={req.Password}");
+
+        // Перевірка, чи дійсно всі дані отримані
+        if (string.IsNullOrEmpty(req.Email) || string.IsNullOrEmpty(req.Username) || string.IsNullOrEmpty(req.Password))
+        {
+            return BadRequest(new { message = "Email, Username, and Password are required" });
+        }
+
         try
         {
             var res = await _userService.Create(req);
+            Console.WriteLine($"User created successfully: {res.Username}");
             return Ok(res);
         }
         catch (Exception e)
         {
-            return BadRequest(new { message = e.Message });
+            Console.WriteLine($"Error occurred: {e.Message}");
+            // Повертаємо повідомлення про помилку з деталями для налагодження
+            return BadRequest(new { message = $"An error occurred: {e.Message}" });
         }
     }
 
+
     // Завантаження профілю зображення
-    [HttpPost("/api/user/upload-avatar")]
+    //[HttpPost("/api/user/upload-avatar")]
+    [HttpPost("upload-avatar")]
     public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
     {
         var user = HttpContext.Items["User"] as User;
@@ -121,7 +158,8 @@ public class UsersController : ControllerBase
     }
 
     // Authenticate a user
-    [HttpPost("/api/[controller]/authenticate")]
+    //[HttpPost("/api/[controller]/authenticate")]
+    [HttpPost("authenticate")]
     public async Task<IActionResult> Authenticate(AuthenticateRequest req)
     {
         var res = await _userService.Authenticate(req);
@@ -133,7 +171,8 @@ public class UsersController : ControllerBase
     }
 
     // Перевірка, чи поточний user is an admin
-    [HttpPost("/api/user/isAdmin")]
+    //[HttpPost("/api/user/isAdmin")]
+    [HttpPost("isAdmin")]
     public IActionResult IsAdmin()
     {
         var user = HttpContext.Items["User"] as User;
@@ -145,8 +184,10 @@ public class UsersController : ControllerBase
     }
 
     // Update інформації користувача тільки authorized може)
+    //[SpaceRythm.Attributes.Authorize]
+    //[HttpPut("/api/user")]
     [SpaceRythm.Attributes.Authorize]
-    [HttpPut("/api/user")]
+    [HttpPut]
     public async Task<IActionResult> Update(UpdateUserRequest req)
     {
         var user = HttpContext.Items["User"] as User;
@@ -159,7 +200,8 @@ public class UsersController : ControllerBase
     }
 
     // Підписка до іншого користувача для отримання оновлень від нього
-    [HttpPost("/api/users/{id}/follow")]
+    //[HttpPost("/api/users/{id}/follow")]
+    [HttpPost("{id}/follow")]
     public async Task<IActionResult> FollowUser(int id)
     {
         var user = HttpContext.Items["User"] as User;
@@ -171,15 +213,18 @@ public class UsersController : ControllerBase
     }
 
     // Список підписників користувача
-    [HttpGet("/api/users/{id}/followers")]
+    //[HttpGet("/api/users/{id}/followers")]
+    [HttpGet("{id}/followers")]
     public async Task<IActionResult> GetFollowers(int id)
     {
         var followers = await _userService.GetFollowers(id);
         return Ok(followers);
     }
 
+
     // Зміна пароля користувача
-    [HttpPost("/api/user/change-password")]
+    //[HttpPost("/api/user/change-password")]
+    [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
     {
         var user = HttpContext.Items["User"] as User;
@@ -191,8 +236,10 @@ public class UsersController : ControllerBase
     }
 
     // Delete поточного користувача
+    //[SpaceRythm.Attributes.Authorize]
+    //[HttpDelete("/api/user")]
     [SpaceRythm.Attributes.Authorize]
-    [HttpDelete("/api/user")]
+    [HttpDelete]
     public async Task<IActionResult> Delete()
     {
         var user = HttpContext.Items["User"] as User;
@@ -205,8 +252,10 @@ public class UsersController : ControllerBase
     }
 
     // Admin-доступ, щоб видалити користувача за id
+    //[Admin]
+    //[HttpDelete("/api/user/{id}")]
     [Admin]
-    [HttpDelete("/api/user/{id}")]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         await _userService.Delete(id);

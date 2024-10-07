@@ -12,8 +12,8 @@ using SpaceRythm.Data;
 namespace SpaceRythm.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    [Migration("20240927194200_AddLikesFollowersCommentsTables")]
-    partial class AddLikesFollowersCommentsTables
+    [Migration("20241005104404_AzureInitialCreate")]
+    partial class AzureInitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,53 @@ namespace SpaceRythm.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+
+            modelBuilder.Entity("SpaceRythm.Entities.AdminLog", b =>
+                {
+                    b.Property<int>("LogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("LogId"));
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("AdminId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("LogId");
+
+                    b.HasIndex("AdminId");
+
+                    b.ToTable("AdminLogs");
+
+                    b.HasData(
+                        new
+                        {
+                            LogId = 1,
+                            ActionType = "UserCreated",
+                            AdminId = 1,
+                            TargetId = 1,
+                            Timestamp = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8227)
+                        },
+                        new
+                        {
+                            LogId = 2,
+                            ActionType = "TrackUploaded",
+                            AdminId = 1,
+                            TargetId = 1,
+                            Timestamp = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8231)
+                        });
+                });
 
             modelBuilder.Entity("SpaceRythm.Entities.Artist", b =>
                 {
@@ -43,7 +90,21 @@ namespace SpaceRythm.Migrations
 
                     b.HasKey("ArtistId");
 
-                    b.ToTable("Artists");
+                    b.ToTable("artist");
+
+                    b.HasData(
+                        new
+                        {
+                            ArtistId = 1,
+                            Bio = "Bio of artist one",
+                            Name = "Artist One"
+                        },
+                        new
+                        {
+                            ArtistId = 2,
+                            Bio = "Bio of artist two",
+                            Name = "Artist Two"
+                        });
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.ArtistLiked", b =>
@@ -120,6 +181,24 @@ namespace SpaceRythm.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Comments");
+
+                    b.HasData(
+                        new
+                        {
+                            CommentId = 1,
+                            Content = "Great track!",
+                            PostedDate = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8072),
+                            TrackId = 1,
+                            UserId = 2
+                        },
+                        new
+                        {
+                            CommentId = 2,
+                            Content = "I love this!",
+                            PostedDate = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8076),
+                            TrackId = 2,
+                            UserId = 1
+                        });
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.Follower", b =>
@@ -140,6 +219,20 @@ namespace SpaceRythm.Migrations
                     b.HasIndex("FollowedUserId");
 
                     b.ToTable("Followers");
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = 1,
+                            FollowedUserId = 2,
+                            FollowDate = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8096)
+                        },
+                        new
+                        {
+                            UserId = 2,
+                            FollowedUserId = 1,
+                            FollowDate = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8099)
+                        });
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.Like", b =>
@@ -160,6 +253,20 @@ namespace SpaceRythm.Migrations
                     b.HasIndex("TrackId");
 
                     b.ToTable("Likes");
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = 1,
+                            TrackId = 1,
+                            LikedDate = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8170)
+                        },
+                        new
+                        {
+                            UserId = 2,
+                            TrackId = 2,
+                            LikedDate = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8172)
+                        });
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.Playlist", b =>
@@ -193,6 +300,26 @@ namespace SpaceRythm.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Playlists");
+
+                    b.HasData(
+                        new
+                        {
+                            PlaylistId = 1,
+                            CreatedDate = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8016),
+                            Description = "This is my first playlist",
+                            IsPublic = true,
+                            Title = "My First Playlist",
+                            UserId = 1
+                        },
+                        new
+                        {
+                            PlaylistId = 2,
+                            CreatedDate = new DateTime(2024, 10, 5, 13, 44, 3, 716, DateTimeKind.Local).AddTicks(8020),
+                            Description = "A playlist for relaxation",
+                            IsPublic = true,
+                            Title = "Chill Vibes",
+                            UserId = 2
+                        });
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.PlaylistTracks", b =>
@@ -211,6 +338,20 @@ namespace SpaceRythm.Migrations
                     b.HasIndex("TrackId");
 
                     b.ToTable("PlaylistTracks");
+
+                    b.HasData(
+                        new
+                        {
+                            PlaylistId = 1,
+                            TrackId = 1,
+                            AddedDate = new DateTime(2024, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(8146)
+                        },
+                        new
+                        {
+                            PlaylistId = 2,
+                            TrackId = 2,
+                            AddedDate = new DateTime(2024, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(8148)
+                        });
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.SongLiked", b =>
@@ -234,6 +375,51 @@ namespace SpaceRythm.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("songs_liked");
+                });
+
+            modelBuilder.Entity("SpaceRythm.Entities.Subscription", b =>
+                {
+                    b.Property<int>("SubscriptionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("SubscriptionId"));
+
+                    b.Property<DateTime?>("SubscriptionEndDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("SubscriptionStartDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SubscriptionId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Subscriptions");
+
+                    b.HasData(
+                        new
+                        {
+                            SubscriptionId = 1,
+                            SubscriptionEndDate = new DateTime(2025, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(8198),
+                            SubscriptionStartDate = new DateTime(2024, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(8198),
+                            Type = 1,
+                            UserId = 1
+                        },
+                        new
+                        {
+                            SubscriptionId = 2,
+                            SubscriptionEndDate = new DateTime(2024, 11, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(8205),
+                            SubscriptionStartDate = new DateTime(2024, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(8204),
+                            Type = 0,
+                            UserId = 2
+                        });
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.Track", b =>
@@ -283,6 +469,32 @@ namespace SpaceRythm.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Tracks");
+
+                    b.HasData(
+                        new
+                        {
+                            TrackId = 1,
+                            ArtistId = 1,
+                            Description = "This is track one",
+                            Duration = new TimeSpan(0, 0, 3, 0, 0),
+                            FilePath = "/tracks/track1.mp3",
+                            Genre = "Pop",
+                            Tags = "tag1,tag2",
+                            Title = "Track One",
+                            UploadDate = new DateTime(2024, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(8047)
+                        },
+                        new
+                        {
+                            TrackId = 2,
+                            ArtistId = 2,
+                            Description = "This is track two",
+                            Duration = new TimeSpan(0, 0, 4, 0, 0),
+                            FilePath = "/tracks/track2.mp3",
+                            Genre = "Rock",
+                            Tags = "tag3,tag4",
+                            Title = "Track Two",
+                            UploadDate = new DateTime(2024, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(8049)
+                        });
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.TrackMetadata", b =>
@@ -323,7 +535,6 @@ namespace SpaceRythm.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Biography")
-                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("biography");
 
@@ -345,7 +556,6 @@ namespace SpaceRythm.Migrations
                         .HasColumnName("is_email_confirmed");
 
                     b.Property<string>("OAuthProvider")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)")
                         .HasColumnName("oauth_provider");
@@ -371,6 +581,43 @@ namespace SpaceRythm.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Biography = "Biography of user 1",
+                            DateJoined = new DateTime(2024, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(7936),
+                            Email = "user1@example.com",
+                            IsAdmin = false,
+                            IsEmailConfirmed = true,
+                            Password = "hashedpassword1",
+                            ProfileImage = "avatar1.png",
+                            Username = "user1"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Biography = "Biography of user 2",
+                            DateJoined = new DateTime(2024, 10, 5, 10, 44, 3, 716, DateTimeKind.Utc).AddTicks(7939),
+                            Email = "user2@example.com",
+                            IsAdmin = false,
+                            IsEmailConfirmed = true,
+                            Password = "hashedpassword2",
+                            ProfileImage = "avatar2.png",
+                            Username = "user2"
+                        });
+                });
+
+            modelBuilder.Entity("SpaceRythm.Entities.AdminLog", b =>
+                {
+                    b.HasOne("SpaceRythm.Entities.User", "Admin")
+                        .WithMany()
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admin");
                 });
 
             modelBuilder.Entity("SpaceRythm.Entities.ArtistLiked", b =>
@@ -493,6 +740,17 @@ namespace SpaceRythm.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SpaceRythm.Entities.Subscription", b =>
+                {
+                    b.HasOne("SpaceRythm.Entities.User", "User")
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SpaceRythm.Entities.Track", b =>
                 {
                     b.HasOne("SpaceRythm.Entities.Artist", "Artist")
@@ -552,6 +810,8 @@ namespace SpaceRythm.Migrations
                     b.Navigation("Likes");
 
                     b.Navigation("SongsLiked");
+
+                    b.Navigation("Subscriptions");
 
                     b.Navigation("Tracks");
                 });

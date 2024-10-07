@@ -15,7 +15,7 @@ public class MyDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<Track> Tracks { get; set; }
-    public DbSet<Artist> Artists { get; set; }
+    public DbSet<Artist> Artist { get; set; }
 
     public DbSet<Playlist> Playlists { get; set; }
 
@@ -55,16 +55,28 @@ public class MyDbContext : DbContext
             .HasForeignKey(f => f.FollowedUserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<Track>()
+       .HasOne(t => t.Artist) // Один Track належить одному Artist
+       .WithMany(a => a.Tracks) // Один Artist може мати багато Tracks
+       .HasForeignKey(t => t.ArtistId) // Вказуємо, що ArtistId є зовнішнім ключем
+       .OnDelete(DeleteBehavior.Cascade); // Вибір поведінки при видаленні
+
         Seed(modelBuilder);
     }
 
     private void Seed(ModelBuilder modelBuilder)
     {
+        // Тестові дані для Artists
+        modelBuilder.Entity<Artist>().HasData(
+     new Artist { ArtistId = 1, Name = "Artist One", Bio = "Bio of artist one" },
+     new Artist { ArtistId = 2, Name = "Artist Two", Bio = "Bio of artist two" }
+ );
+
         // Тестові дані для Users
         modelBuilder.Entity<User>().HasData(
-        new User { Id = 1, Email = "user1@example.com", Password = "hashedpassword1", Username = "user1", ProfileImage = "avatar1.png", Biography = "Biography of user 1", DateJoined = DateTime.UtcNow, IsEmailConfirmed = true },
-        new User { Id = 2, Email = "user2@example.com", Password = "hashedpassword2", Username = "user2", ProfileImage = "avatar2.png", Biography = "Biography of user 2", DateJoined = DateTime.UtcNow, IsEmailConfirmed = true }
-    );
+            new User { Id = 1, Email = "user1@example.com", Password = "hashedpassword1", Username = "user1", ProfileImage = "avatar1.png", Biography = "Biography of user 1", DateJoined = DateTime.UtcNow, IsEmailConfirmed = true },
+            new User { Id = 2, Email = "user2@example.com", Password = "hashedpassword2", Username = "user2", ProfileImage = "avatar2.png", Biography = "Biography of user 2", DateJoined = DateTime.UtcNow, IsEmailConfirmed = true }
+        );
 
         // Тестові дані для Playlists
         modelBuilder.Entity<Playlist>().HasData(
@@ -74,9 +86,9 @@ public class MyDbContext : DbContext
 
         // Тестові дані для Tracks
         modelBuilder.Entity<Track>().HasData(
-    new Track { TrackId = 1, ArtistId = 1, Title = "Track One", Genre = "Pop", Tags = "tag1,tag2", Description = "This is track one", FilePath = "/tracks/track1.mp3", Duration = TimeSpan.FromMinutes(3), UploadDate = DateTime.UtcNow },
-    new Track { TrackId = 2, ArtistId = 2, Title = "Track Two", Genre = "Rock", Tags = "tag3,tag4", Description = "This is track two", FilePath = "/tracks/track2.mp3", Duration = TimeSpan.FromMinutes(4), UploadDate = DateTime.UtcNow }
-);
+            new Track { TrackId = 1, ArtistId = 1, Title = "Track One", Genre = "Pop", Tags = "tag1,tag2", Description = "This is track one", FilePath = "/tracks/track1.mp3", Duration = TimeSpan.FromMinutes(3), UploadDate = DateTime.UtcNow },
+            new Track { TrackId = 2, ArtistId = 2, Title = "Track Two", Genre = "Rock", Tags = "tag3,tag4", Description = "This is track two", FilePath = "/tracks/track2.mp3", Duration = TimeSpan.FromMinutes(4), UploadDate = DateTime.UtcNow }
+        );
 
         // Тестові дані для Comments
         modelBuilder.Entity<Comment>().HasData(
@@ -92,9 +104,10 @@ public class MyDbContext : DbContext
 
         // Тестові дані для PlaylistTracks
         modelBuilder.Entity<PlaylistTracks>().HasData(
-        new PlaylistTracks { PlaylistId = 1, TrackId = 1, AddedDate = DateTime.UtcNow },
-        new PlaylistTracks { PlaylistId = 2, TrackId = 2, AddedDate = DateTime.UtcNow }
-    );
+            new PlaylistTracks { PlaylistId = 1, TrackId = 1, AddedDate = DateTime.UtcNow },
+            new PlaylistTracks { PlaylistId = 2, TrackId = 2, AddedDate = DateTime.UtcNow }
+        );
+
         // Тестові дані для Likes
         modelBuilder.Entity<Like>().HasData(
             new Like { UserId = 1, TrackId = 1, LikedDate = DateTime.Now },
@@ -103,9 +116,9 @@ public class MyDbContext : DbContext
 
         // Тестові дані для Subscriptions
         modelBuilder.Entity<Subscription>().HasData(
-        new Subscription { SubscriptionId = 1, UserId = 1, Type = SubscriptionType.Premium, SubscriptionStartDate = DateTime.UtcNow, SubscriptionEndDate = DateTime.UtcNow.AddYears(1) },
-        new Subscription { SubscriptionId = 2, UserId = 2, Type = SubscriptionType.Free, SubscriptionStartDate = DateTime.UtcNow, SubscriptionEndDate = DateTime.UtcNow.AddMonths(1) }
-    );
+            new Subscription { SubscriptionId = 1, UserId = 1, Type = SubscriptionType.Premium, SubscriptionStartDate = DateTime.UtcNow, SubscriptionEndDate = DateTime.UtcNow.AddYears(1) },
+            new Subscription { SubscriptionId = 2, UserId = 2, Type = SubscriptionType.Free, SubscriptionStartDate = DateTime.UtcNow, SubscriptionEndDate = DateTime.UtcNow.AddMonths(1) }
+        );
 
         // Тестові дані для AdminLogs
         modelBuilder.Entity<AdminLog>().HasData(
