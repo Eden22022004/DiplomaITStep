@@ -33,10 +33,10 @@ public class User
     public bool IsAdmin { get; set; } = false;
     [MaxLength(255)]
     [Column("profile_image")] 
-    public string ProfileImage { get; set; }
+    public string? ProfileImage { get; set; }
 
     [Column("biography", TypeName = "TEXT")] 
-    public string Biography { get; set; }
+    public string? Biography { get; set; }
 
     [Column("date_joined")]
     public DateTime DateJoined { get; set; } = DateTime.UtcNow; 
