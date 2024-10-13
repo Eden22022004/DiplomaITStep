@@ -20,6 +20,7 @@ public interface IUserService
 
     Task<AuthenticateResponse> Authenticate(AuthenticateRequest req);
     Task<AuthenticateResponse> AuthenticateWithOAuth(ClaimsPrincipal claimsPrincipal);
+
     Task<UpdateUserResponse> Update(string id, UpdateUserRequest req);
 
     Task<string> UploadAvatar(int userId, string avatarPath);
@@ -30,6 +31,5 @@ public interface IUserService
     Task <bool> Delete(int id);
     //Task<bool> VerifyFacebookRequest(string accessToken);
     Task<string> VerifyFacebookRequest(string accessToken);
-
 }
 

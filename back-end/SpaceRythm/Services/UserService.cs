@@ -16,7 +16,6 @@ using System.Net.Http;
 
 namespace SpaceRythm.Services
 {
-
     public class UserService : IUserService
     {
         private readonly MyDbContext _context;
@@ -65,6 +64,7 @@ namespace SpaceRythm.Services
         public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest req)
         {
             Console.WriteLine($"Attempting to authenticate user with username: {req.Username}");
+
 
             var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == req.Username);
             if (user == null)
@@ -182,6 +182,7 @@ namespace SpaceRythm.Services
                 user.Password = PasswordHash.Hash(req.Password);
             }
 
+
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
@@ -216,6 +217,7 @@ namespace SpaceRythm.Services
 
             if (follower == null || followedUser == null)
                 throw new KeyNotFoundException("User not found");
+
 
             var alreadyFollowing = await _context.Followers
                 .AnyAsync(f => f.UserId == followerId && f.FollowedUserId == followedUserId);
