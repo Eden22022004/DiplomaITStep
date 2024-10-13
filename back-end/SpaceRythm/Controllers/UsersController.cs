@@ -7,10 +7,14 @@ using SpaceRythm.Interfaces;
 using SpaceRythm.Models.User;
 using Org.BouncyCastle.Ocsp;
 using SpaceRythm.DTOs;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.Facebook;
 
 
 namespace SpaceRythm.Controllers;
-
 
 [ApiController]
 [Route("api/[controller]")]
@@ -25,7 +29,6 @@ public class UsersController : ControllerBase
 
     // Get users
     [HttpGet]
-    //[Route("api/users")]
     public async Task<IActionResult> GetAllUsers()
     {
         var users = await _userService.GetAll();
@@ -42,7 +45,6 @@ public class UsersController : ControllerBase
     //}
 
     // Отримати конкретного user по id
-    //[HttpGet("/api/users/{id}")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(string id)
     {
@@ -53,7 +55,6 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
-    //[HttpGet("/api/users/by-username/{username}")]
     [HttpGet("by-username/{username}")]
     public async Task<IActionResult> GetByUsername(string username)
     {
@@ -65,7 +66,6 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
-    //[HttpGet("/api/users/by-email/{email}")]
     [HttpGet("by-email/{email}")]
     public async Task<IActionResult> GetByEmail(string email)
     {
@@ -75,24 +75,6 @@ public class UsersController : ControllerBase
 
         return Ok(user);
     }
-
-
-    // Create a new user
-    //[HttpPost("/api/[controller]")]
-    //[HttpPost]
-    //public async Task<IActionResult> Create(CreateUserRequest req)
-    //{
-
-    //    try
-    //    {
-    //        var res = await _userService.Create(req);
-    //        return Ok(res);
-    //    }
-    //    catch (Exception e)
-    //    {
-    //        return BadRequest(new { message = e.Message });
-    //    }
-    //}
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateUserRequest req)
@@ -120,9 +102,7 @@ public class UsersController : ControllerBase
         }
     }
 
-
     // Завантаження профілю зображення
-    //[HttpPost("/api/user/upload-avatar")]
     [HttpPost("upload-avatar")]
     public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
     {
@@ -158,7 +138,6 @@ public class UsersController : ControllerBase
     }
 
     // Authenticate a user
-    //[HttpPost("/api/[controller]/authenticate")]
     [HttpPost("authenticate")]
     public async Task<IActionResult> Authenticate(AuthenticateRequest req)
     {
@@ -170,8 +149,88 @@ public class UsersController : ControllerBase
         return Ok(res);
     }
 
+    [HttpGet("google")]
+    public IActionResult GoogleLogin()
+    {
+        Console.WriteLine("Google login initiated.");
+
+        // Генеруємо URL для редіректу після успішної автентифікації
+        var redirectUrl = Url.Action("GoogleResponse", "Auth", new { }, Request.Scheme);
+
+        // Формуємо параметри для зовнішньої автентифікації
+        var properties = new AuthenticationProperties
+        {
+            RedirectUri = redirectUrl
+        };
+
+        Console.WriteLine($"OAuth state before redirect: {properties.Items["state"]}");
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    [HttpGet("google-response")]
+    public async Task<IActionResult> GoogleResponse(string redirectUri)
+    {
+        Console.WriteLine("GoogleResponse invoked with redirectUri: " + redirectUri);
+
+        var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+
+        if (result?.Succeeded != true)
+        {
+            Console.WriteLine("Google authentication failed.");
+            return BadRequest("Authentication failed");
+        }
+
+        Console.WriteLine("Google authentication succeeded.");
+        Console.WriteLine($"User email: {result.Principal.FindFirst(ClaimTypes.Email)?.Value}");
+
+        // Виклик UserService для автентифікації через Google
+        var authenticateResponse = await _userService.AuthenticateWithOAuth(result.Principal);
+
+        Console.WriteLine($"Generated token: {authenticateResponse.JwtToken}");
+
+        // Редірект із JWT токеном
+        return Redirect($"{redirectUri}?token={authenticateResponse.JwtToken}");
+    }
+
+    [HttpGet("facebook")]
+    public IActionResult FacebookLogin()
+    {
+        Console.WriteLine("Facebook login initiated.");
+
+        var redirectUrl = Url.Action("FacebookResponse", "Users", new { }, Request.Scheme);
+        var properties = new AuthenticationProperties
+        {
+            RedirectUri = redirectUrl
+        };
+
+        Console.WriteLine($"OAuth state before redirect: {properties.Items["state"]}");
+        return Challenge(properties, FacebookDefaults.AuthenticationScheme);
+    }
+
+    [HttpGet("facebook-response")]
+    public async Task<IActionResult> FacebookResponse(string redirectUri)
+    {
+        Console.WriteLine("FacebookResponse invoked with redirectUri: " + redirectUri);
+
+        var result = await HttpContext.AuthenticateAsync(FacebookDefaults.AuthenticationScheme);
+
+        if (result?.Succeeded != true)
+        {
+            Console.WriteLine("Facebook authentication failed.");
+            return BadRequest("Authentication failed");
+        }
+
+        Console.WriteLine("Facebook authentication succeeded.");
+        Console.WriteLine($"User email: {result.Principal.FindFirst(ClaimTypes.Email)?.Value}");
+
+        var authenticateResponse = await _userService.AuthenticateWithOAuth(result.Principal); 
+
+        Console.WriteLine($"Generated token: {authenticateResponse.JwtToken}");
+
+        return Redirect($"{redirectUri}?token={authenticateResponse.JwtToken}");
+    }
+
     // Перевірка, чи поточний user is an admin
-    //[HttpPost("/api/user/isAdmin")]
     [HttpPost("isAdmin")]
     public IActionResult IsAdmin()
     {
@@ -184,8 +243,6 @@ public class UsersController : ControllerBase
     }
 
     // Update інформації користувача тільки authorized може)
-    //[SpaceRythm.Attributes.Authorize]
-    //[HttpPut("/api/user")]
     [SpaceRythm.Attributes.Authorize]
     [HttpPut]
     public async Task<IActionResult> Update(UpdateUserRequest req)
@@ -200,7 +257,6 @@ public class UsersController : ControllerBase
     }
 
     // Підписка до іншого користувача для отримання оновлень від нього
-    //[HttpPost("/api/users/{id}/follow")]
     [HttpPost("{id}/follow")]
     public async Task<IActionResult> FollowUser(int id)
     {
@@ -213,7 +269,6 @@ public class UsersController : ControllerBase
     }
 
     // Список підписників користувача
-    //[HttpGet("/api/users/{id}/followers")]
     [HttpGet("{id}/followers")]
     public async Task<IActionResult> GetFollowers(int id)
     {
@@ -223,7 +278,6 @@ public class UsersController : ControllerBase
 
 
     // Зміна пароля користувача
-    //[HttpPost("/api/user/change-password")]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
     {
@@ -236,8 +290,6 @@ public class UsersController : ControllerBase
     }
 
     // Delete поточного користувача
-    //[SpaceRythm.Attributes.Authorize]
-    //[HttpDelete("/api/user")]
     [SpaceRythm.Attributes.Authorize]
     [HttpDelete]
     public async Task<IActionResult> Delete()
@@ -251,14 +303,43 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
-    // Admin-доступ, щоб видалити користувача за id
-    //[Admin]
-    //[HttpDelete("/api/user/{id}")]
-    [Admin]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        await _userService.Delete(id);
-        return Ok();
+        var result = await _userService.Delete(id);
+        if (!result)
+            return NotFound(new { message = "User not found" });
+
+        return Ok(new { message = "User deleted successfully" });
     }
+
+    [HttpPost("delete")]
+    public async Task<IActionResult> DeleteFacebookUser([FromBody] FacebookDeletionRequest request)
+    {
+        // Use the AccessToken from the request
+        var userIdString = await _userService.VerifyFacebookRequest(request.AccessToken); // Use AccessToken instead of UserId
+
+        if (string.IsNullOrEmpty(userIdString)) // Check if userId is null or empty
+        {
+            return BadRequest(new { message = "Invalid request" });
+        }
+
+        // Convert userIdString to int
+        if (!int.TryParse(userIdString, out int userId)) // This tries to parse the string to an integer
+        {
+            return BadRequest(new { message = "Invalid user ID format" }); // Handle invalid format
+        }
+
+        await _userService.Delete(userId); // Call Delete with the integer userId
+        return Ok(new { message = "User data deleted successfully" });
+    }
+
+    // Admin-доступ, щоб видалити користувача за id
+    //[Admin]
+    //[HttpDelete("{id}")]
+    //public async Task<IActionResult> Delete(int id)
+    //{
+    //    await _userService.Delete(id);
+    //    return Ok();
+    //}
 }

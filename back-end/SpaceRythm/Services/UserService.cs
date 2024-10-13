@@ -10,18 +10,24 @@ using SpaceRythm.Util;
 using Microsoft.Extensions.Options;
 using SpaceRythm.Exceptions;
 using SpaceRythm.DTOs;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+using System.Net.Http;
 
 namespace SpaceRythm.Services
 {
+
     public class UserService : IUserService
     {
         private readonly MyDbContext _context;
         private readonly JwtSettings _jwtSettings;
+        private readonly HttpClient _httpClient;
 
-        public UserService(MyDbContext context, IOptions<JwtSettings> jwtOptions)
+        public UserService(MyDbContext context, IOptions<JwtSettings> jwtOptions, HttpClient httpClient)
         {
             _context = context;
             _jwtSettings = jwtOptions.Value;
+            _httpClient = httpClient;
         }
 
         public async Task<IEnumerable<User>> GetAll()
@@ -52,66 +58,133 @@ namespace SpaceRythm.Services
 
             string token = Jwt.GenerateToken(_jwtSettings, user);
 
-            return new CreateUserResponse(user, token); // Pass the user and token to the response
+            return new CreateUserResponse(user, token); 
+           
         }
 
         public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest req)
         {
             Console.WriteLine($"Attempting to authenticate user with username: {req.Username}");
 
-            // Step 1: Find user by email or username
-            //var user = await _context.Users.SingleOrDefaultAsync(u => u.Email == req.Email || u.Username == req.Username);
             var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == req.Username);
             if (user == null)
             {
                 Console.WriteLine($"User with username {req.Username} not found.");
-                // Return null or throw an error if the user is not found
                 throw new Exception("User not found");
             }
 
-            // Step 2: Verify the password
             if (!PasswordHash.Verify(req.Password, user.Password))
             {
                 Console.WriteLine($"Invalid password for user {req.Username}.");
-                // Password is incorrect
                 throw new Exception("Invalid password");
             }
             Console.WriteLine($"Password verification succeeded for user {req.Username}. Generating JWT token...");
-            // Step 3: Generate JWT token
             string token = Jwt.GenerateToken(_jwtSettings, user);
             Console.WriteLine($"JWT token generated successfully for user {req.Username}.");
-            // Step 4: Return AuthenticateResponse with user data and token
             return new AuthenticateResponse(user, token);
         }
+        public async Task<AuthenticateResponse> AuthenticateWithOAuth(ClaimsPrincipal claimsPrincipal)
+        {
+            var email = claimsPrincipal.FindFirstValue(ClaimTypes.Email);
+            var username = claimsPrincipal.FindFirstValue(ClaimTypes.Name);
+
+            var user = await GetByEmail(email);
+
+            if (user == null)
+            {
+                var createUserRequest = new CreateUserRequest
+                {
+                    Email = email,
+                    Username = username,
+                };
+
+                var createUserResponse = await Create(createUserRequest);
+
+                user = new User
+                {
+                    Id = createUserResponse.Id,
+                    Email = createUserResponse.Email,
+                    Username = createUserResponse.Username,
+                    ProfileImage = createUserResponse.ProfileImage,
+                    Biography = createUserResponse.Biography,
+                    DateJoined = createUserResponse.DateJoined,
+                    IsEmailConfirmed = createUserResponse.IsEmailConfirmed,
+                    SongsLiked = new List<SongLiked>(),
+                    ArtistsLiked = new List<ArtistLiked>(),
+                    CategoriesLiked = new List<CategoryLiked>()
+                };
+            }
+
+            var token  = Jwt.GenerateToken(_jwtSettings, user);
+
+            return new AuthenticateResponse(user, token);
+            
+        }
+
+        //public async Task<AuthenticateResponse> AuthenticateWithGoogle(ClaimsPrincipal claimsPrincipal)
+        //{
+        //    var email = claimsPrincipal.FindFirstValue(ClaimTypes.Email);
+        //    var username = claimsPrincipal.FindFirstValue(ClaimTypes.Name);
+
+        //    // Step 1: Check if the user exists by email
+        //    var user = await GetByEmail(email);
+        //    if (user == null)
+        //    {
+        //        // If the user doesn't exist, create a new one
+        //        var createUserRequest = new CreateUserRequest
+        //        {
+        //            Email = email,
+        //            Username = username
+        //            // Add other necessary fields as required
+        //        };
+
+        //        // CreateUserResponse will be returned instead of User
+        //        var createUserResponse = await Create(createUserRequest);
+
+        //        // Create a User object for the AuthenticateResponse
+        //        user = new User
+        //        {
+        //            Id = createUserResponse.Id,
+        //            Email = createUserResponse.Email,
+        //            Username = createUserResponse.Username,
+        //            ProfileImage = createUserResponse.ProfileImage,
+        //            Biography = createUserResponse.Biography,
+        //            DateJoined = createUserResponse.DateJoined,
+        //            IsEmailConfirmed = createUserResponse.IsEmailConfirmed,
+        //            SongsLiked = new List<SongLiked>(), 
+        //            ArtistsLiked = new List<ArtistLiked>(), 
+        //            CategoriesLiked = new List<CategoryLiked>() 
+        //        };
+        //    }
+
+        //    // Step 2: Generate JWT token for the user
+        //    string token = Jwt.GenerateToken(_jwtSettings, user);
+
+        //    // Step 3: Return AuthenticateResponse with user data and token
+        //    return new AuthenticateResponse(user, token);
+        //}
 
         public async Task<UpdateUserResponse> Update(string id, UpdateUserRequest req)
         {
-            // Step 1: Find user by ID
             var user = await _context.Users.FindAsync(id);
 
             if (user == null)
             {
-                // Throw an error if the user is not found
                 throw new Exception("User not found");
             }
-
-            // Step 2: Update user properties with new values
-            user.Email = req.Email ?? user.Email; // If a new email is provided, update it
-            user.Username = req.Username ?? user.Username; // Same for username
+            user.Email = req.Email ?? user.Email; 
+            user.Username = req.Username ?? user.Username; 
             user.ProfileImage = req.ProfileImage ?? user.ProfileImage;
             user.Biography = req.Biography ?? user.Biography;
 
-            // You might want to hash the new password if it’s updated
             if (!string.IsNullOrEmpty(req.Password))
             {
                 user.Password = PasswordHash.Hash(req.Password);
             }
 
-            // Step 3: Save changes to the database
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
-            // Step 4: Return the updated user information
             return new UpdateUserResponse
             {
                 //Id = user.Id.ToString(),
@@ -132,7 +205,7 @@ namespace SpaceRythm.Services
             user.ProfileImage = avatarPath;
             await _context.SaveChangesAsync();
 
-            return user.ProfileImage;  // Возвращаем путь к аватару
+            return user.ProfileImage; 
         }
 
         // 2. Follow User
@@ -144,7 +217,6 @@ namespace SpaceRythm.Services
             if (follower == null || followedUser == null)
                 throw new KeyNotFoundException("User not found");
 
-            // Перевірка, чи підписник вже підписаний на користувача
             var alreadyFollowing = await _context.Followers
                 .AnyAsync(f => f.UserId == followerId && f.FollowedUserId == followedUserId);
 
@@ -165,15 +237,14 @@ namespace SpaceRythm.Services
         // 3. Get Followers
         public async Task<IEnumerable<FollowerDto>> GetFollowers(int followedUserId)
         {
-            // Отримуємо всіх підписників для конкретного користувача і додаткову інформацію про них
             var followers = await _context.Followers
                 .Where(f => f.FollowedUserId == followedUserId)
                 .Select(f => new FollowerDto
                 {
-                    Id = f.UserId,                     // ID підписника
-                    Username = f.User.Username,        // Ім'я користувача підписника
-                    Avatar = f.User.ProfileImage,      // URL аватара підписника
-                    FollowDate = f.FollowDate          // Дата підписки
+                    Id = f.UserId,       
+                    Username = f.User.Username,   
+                    Avatar = f.User.ProfileImage,  
+                    FollowDate = f.FollowDate       
                 })
                 .ToListAsync();
 
@@ -186,7 +257,6 @@ namespace SpaceRythm.Services
             var user = await _context.Users.FindAsync(userId);
             if (user == null) throw new KeyNotFoundException("User not found");
 
-            // Assuming you have a method to validate the old password and hash the new one
             if (!VerifyPassword(request.OldPassword, user.Password))
             {
                 throw new AppException("Old password is incorrect");
@@ -198,7 +268,6 @@ namespace SpaceRythm.Services
 
         private bool VerifyPassword(string inputPassword, string storedHash)
         {
-            // Logic for verifying password
             return BCrypt.Net.BCrypt.Verify(inputPassword, storedHash);
         }
 
@@ -207,16 +276,58 @@ namespace SpaceRythm.Services
             return BCrypt.Net.BCrypt.HashPassword(password);
         }
 
-        public async Task Delete(int id)
+        //public async Task Delete(int id)
+        //{
+        //    var user = await _context.Users.FindAsync(id);
+        //    if (user != null)
+        //    {
+        //        _context.Users.Remove(user);
+        //        await _context.SaveChangesAsync();
+        //    }
+
+        //}
+
+        public async Task<bool> Delete(int id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user != null)
+            if (user == null)
+                return false;
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<string> VerifyFacebookRequest(string accessToken)
+        {
+            string appId = "526202996837238";
+            string url = $"https://graph.facebook.com/me?access_token={accessToken}&fields=id,name,email";
+
+            try
             {
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
+                var response = await _httpClient.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var userData = await response.Content.ReadFromJsonAsync<FacebookUser>();
+                    return userData.Id; 
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                // Log exception
+                Console.WriteLine($"Request error: {e.Message}");
             }
 
+            return null;
         }
     }
-   
+
+    public class FacebookUser
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string Email { get; set; }
+    }
 }
+   
+

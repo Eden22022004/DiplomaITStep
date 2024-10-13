@@ -9,7 +9,7 @@ using SpaceRythm.Util;
 namespace SpaceRythm.Entities;
 
 
-public class User
+public class User 
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
