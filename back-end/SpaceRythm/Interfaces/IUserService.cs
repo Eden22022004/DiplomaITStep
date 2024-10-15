@@ -31,5 +31,6 @@ public interface IUserService
     //Task<bool> VerifyFacebookRequest(string accessToken);
     Task<string> VerifyFacebookRequest(string accessToken);
 
+    Task Delete(int id);
 }
 

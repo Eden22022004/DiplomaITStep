@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Authentication.Facebook;
 
 namespace SpaceRythm.Controllers;
 
+
 [ApiController]
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
@@ -29,6 +30,7 @@ public class UsersController : ControllerBase
 
     // Get users
     [HttpGet]
+    //[Route("api/users")]
     public async Task<IActionResult> GetAllUsers()
     {
         var users = await _userService.GetAll();
@@ -45,6 +47,7 @@ public class UsersController : ControllerBase
     //}
 
     // Отримати конкретного user по id
+    //[HttpGet("/api/users/{id}")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(string id)
     {
@@ -55,6 +58,7 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
+    //[HttpGet("/api/users/by-username/{username}")]
     [HttpGet("by-username/{username}")]
     public async Task<IActionResult> GetByUsername(string username)
     {
@@ -66,6 +70,7 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
+    //[HttpGet("/api/users/by-email/{email}")]
     [HttpGet("by-email/{email}")]
     public async Task<IActionResult> GetByEmail(string email)
     {
@@ -75,6 +80,24 @@ public class UsersController : ControllerBase
 
         return Ok(user);
     }
+
+
+    // Create a new user
+    //[HttpPost("/api/[controller]")]
+    //[HttpPost]
+    //public async Task<IActionResult> Create(CreateUserRequest req)
+    //{
+
+    //    try
+    //    {
+    //        var res = await _userService.Create(req);
+    //        return Ok(res);
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        return BadRequest(new { message = e.Message });
+    //    }
+    //}
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateUserRequest req)
@@ -102,7 +125,9 @@ public class UsersController : ControllerBase
         }
     }
 
+
     // Завантаження профілю зображення
+    //[HttpPost("/api/user/upload-avatar")]
     [HttpPost("upload-avatar")]
     public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
     {
@@ -231,6 +256,7 @@ public class UsersController : ControllerBase
     }
 
     // Перевірка, чи поточний user is an admin
+    //[HttpPost("/api/user/isAdmin")]
     [HttpPost("isAdmin")]
     public IActionResult IsAdmin()
     {
@@ -243,6 +269,8 @@ public class UsersController : ControllerBase
     }
 
     // Update інформації користувача тільки authorized може)
+    //[SpaceRythm.Attributes.Authorize]
+    //[HttpPut("/api/user")]
     [SpaceRythm.Attributes.Authorize]
     [HttpPut]
     public async Task<IActionResult> Update(UpdateUserRequest req)
@@ -257,6 +285,7 @@ public class UsersController : ControllerBase
     }
 
     // Підписка до іншого користувача для отримання оновлень від нього
+    //[HttpPost("/api/users/{id}/follow")]
     [HttpPost("{id}/follow")]
     public async Task<IActionResult> FollowUser(int id)
     {
@@ -269,6 +298,7 @@ public class UsersController : ControllerBase
     }
 
     // Список підписників користувача
+    //[HttpGet("/api/users/{id}/followers")]
     [HttpGet("{id}/followers")]
     public async Task<IActionResult> GetFollowers(int id)
     {
@@ -278,6 +308,7 @@ public class UsersController : ControllerBase
 
 
     // Зміна пароля користувача
+    //[HttpPost("/api/user/change-password")]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
     {
@@ -290,6 +321,8 @@ public class UsersController : ControllerBase
     }
 
     // Delete поточного користувача
+    //[SpaceRythm.Attributes.Authorize]
+    //[HttpDelete("/api/user")]
     [SpaceRythm.Attributes.Authorize]
     [HttpDelete]
     public async Task<IActionResult> Delete()
@@ -303,36 +336,9 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
-
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var result = await _userService.Delete(id);
-        if (!result)
-            return NotFound(new { message = "User not found" });
-
-        return Ok(new { message = "User deleted successfully" });
-    }
-
-    [HttpPost("delete")]
-    public async Task<IActionResult> DeleteFacebookUser([FromBody] FacebookDeletionRequest request)
-    {
-        // Use the AccessToken from the request
-        var userIdString = await _userService.VerifyFacebookRequest(request.AccessToken); // Use AccessToken instead of UserId
-
-        if (string.IsNullOrEmpty(userIdString)) // Check if userId is null or empty
-        {
-            return BadRequest(new { message = "Invalid request" });
-        }
-
-        // Convert userIdString to int
-        if (!int.TryParse(userIdString, out int userId)) // This tries to parse the string to an integer
-        {
-            return BadRequest(new { message = "Invalid user ID format" }); // Handle invalid format
-        }
-
-        await _userService.Delete(userId); // Call Delete with the integer userId
-        return Ok(new { message = "User data deleted successfully" });
     }
 
     // Admin-доступ, щоб видалити користувача за id

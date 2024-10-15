@@ -45,9 +45,9 @@
             <div class="mt-3">
                 <h3>Or sign in with</h3>
                 <a class="btn btn-danger" href="https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=529619917768-2jc98691imtp6bb38j0dhhnhp0eb09lh.apps.googleusercontent.com&redirect_uri=https://localhost:5017/users/google-response&scope=email profile">Sign in with Google</a>
-            </div>
         </div>
     </div>
+</div>
 </div>
 
 @section Scripts {
@@ -74,7 +74,6 @@
             }
         });
 
-        document.getElementById('loginForm').addEventListener('submit', async function (event) {
             event.preventDefault();
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;

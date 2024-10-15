@@ -21,41 +21,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders(); // Clear providers
 builder.Logging.AddConsole(); // Add console logging
 
-// Configure services
-ConfigureServices(builder.Services, builder.Configuration);
 
-var app = builder.Build();
-
-// Middleware to log session start and end times
-app.Use(async (context, next) =>
-{
-    var sessionStartTime = DateTime.UtcNow;
-    Console.WriteLine($"Session started at {sessionStartTime} UTC");
-
-    await next.Invoke();
-
-    var sessionEndTime = DateTime.UtcNow;
-    Console.WriteLine($"Session ended at {sessionEndTime} UTC");
-});
-
-// Configure the HTTP request pipeline
-ConfigureMiddleware(app);
-
-app.Run();
-
-// Method to configure services
-void ConfigureServices(IServiceCollection services, IConfiguration configuration)
-{
-    // Load JWT settings
-    var jwtSettingsSection = configuration.GetSection("JwtSettings");
-    var jwtSettings = jwtSettingsSection.Get<JwtSettings>();
-
-    services.Configure<JwtSettings>(jwtSettingsSection);
-
-    // MySQL connection
-    var connectionString = configuration.GetConnectionString("DefaultConnection");
-    services.AddDbContext<MyDbContext>(options =>
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
     // Add session services
     services.AddSession(options =>
@@ -64,110 +31,31 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         options.Cookie.HttpOnly = true;
     });
 
-    services.AddHttpClient();
 
-    // Authentication configuration (JWT and Cookies)
-    services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    })
-    .AddCookie()
-    .AddGoogle("Google", options =>
-    {
-        options.ClientId = configuration["Google:ClientId"];
-        options.ClientSecret = configuration["Google:ClientSecret"];
-        options.CallbackPath = "/users/google-response";
-
-        options.Events = new OAuthEvents
-        {
-            OnRedirectToAuthorizationEndpoint = context =>
-            {
-                var state = context.Properties.Items["state"];
-                context.HttpContext.Session.SetString("oauth_state", state);
-                context.Response.Redirect(context.RedirectUri);
-                return Task.CompletedTask;
-            },
-            OnCreatingTicket = context =>
-            {
-                var expectedState = context.HttpContext.Session.GetString("oauth_state");
-                if (context.Properties.Items["state"] != expectedState)
-                {
-                    context.Fail("Invalid state.");
-                }
-                Console.WriteLine($"Google OAuth ticket created: {context.AccessToken}");
-                return Task.CompletedTask;
-            },
-            OnRemoteFailure = context =>
-            {
-                Console.WriteLine($"OAuth Error: {context.Failure?.Message}");
-                return Task.CompletedTask;
-            }
-        };
-    })
-    .AddFacebook(options =>
-    {
-        options.AppId = configuration["Facebook:AppId"];
-        options.AppSecret = configuration["Facebook:AppSecret"];
-        options.CallbackPath = "/users/facebook-response";
-
-        options.Events = new OAuthEvents
-        {
-            OnRedirectToAuthorizationEndpoint = context =>
-            {
-                var state = context.Properties.Items["state"];
-                context.HttpContext.Session.SetString("oauth_state", state);
-                context.Response.Redirect(context.RedirectUri);
-                return Task.CompletedTask;
-            },
-            OnCreatingTicket = context =>
-            {
-                var expectedState = context.HttpContext.Session.GetString("oauth_state");
-                if (context.Properties.Items["state"] != expectedState)
-                {
-                    context.Fail("Invalid state.");
-                }
-                Console.WriteLine($"Facebook OAuth ticket created: {context.AccessToken}");
-                return Task.CompletedTask;
-            },
-            OnRemoteFailure = context =>
-            {
-                Console.WriteLine($"OAuth Error: {context.Failure?.Message}");
-                return Task.CompletedTask;
-            }
-        };
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
-        };
-    });
-
-    // Add custom services
-    services.AddScoped<IUserService, UserService>();
-    services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-
-    // Add controllers and Razor Pages
-    services.AddControllers();
-    services.AddRazorPages();
-}
-
-// Method to configure middleware
-void ConfigureMiddleware(WebApplication app)
 {
-    if (!app.Environment.IsDevelopment())
+})
+.AddJwtBearer(options =>
+{
+    // Use jwtSettings properties directly
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        app.UseExceptionHandler("/Error");
-        app.UseHsts();
-    }
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
+    };
+});
+
+
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
 
     app.UseSession(); // Move this line here
 
@@ -177,13 +65,14 @@ void ConfigureMiddleware(WebApplication app)
         Secure = CookieSecurePolicy.Always,
     });
 
-    app.UseHttpsRedirection();
-    app.UseRouting();
+app.UseHttpsRedirection();
+app.UseRouting();
 
     app.UseAuthentication();
-    app.UseAuthorization();
+app.UseAuthorization();
 
-    app.MapRazorPages();
+// Ensure that Razor Pages are mapped
+app.MapRazorPages();
     app.MapControllers();
 }
 
@@ -385,67 +274,5 @@ void ConfigureMiddleware(WebApplication app)
 
 
 
-//// Configure JWT authentication
 
-//builder.Services.AddAuthentication(options =>
-//{
-//    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-//    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-//})
-//.AddJwtBearer(options =>
-//{
-//    // Use jwtSettings properties directly
-//    options.TokenValidationParameters = new TokenValidationParameters
-//    {
-//        ValidateIssuer = true,
-//        ValidateAudience = true,
-//        ValidateLifetime = true,
-//        ValidateIssuerSigningKey = true,
-//        ValidIssuer = jwtSettings.Issuer,
-//        ValidAudience = jwtSettings.Audience,
-//        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
-//    };
-//})
-//.AddGoogle("Google", options =>
-//{
-//    options.ClientId = builder.Configuration["Google:ClientId"];
-//    options.ClientSecret = builder.Configuration["Google:ClientSecret"];
-//    options.Scope.Add("email");
-//    options.Scope.Add("profile");
-//    options.SaveTokens = true; // Зберегти токени
-//    options.CallbackPath = "/signin-google"; // URL для повернення після авторизації
-//});
-
-
-//// Add services
-//builder.Services.AddScoped<IUserService, UserService>();
-
-//// Add services for API controllers
-//builder.Services.AddControllers();
-
-//// Add Razor Pages services
-//builder.Services.AddRazorPages();
-
-//var app = builder.Build();
-
-//// Configure HTTP request processing pipeline
-//if (!app.Environment.IsDevelopment())
-//{
-//    app.UseExceptionHandler("/Error");
-//    app.UseHsts();
-//}
-
-//app.UseHttpsRedirection();
-//app.UseRouting();
-//app.UseAuthentication();
-//app.UseAuthorization();
-
-//// Ensure that Razor Pages are mapped
-//app.MapRazorPages();
-
-//// Register routes for API controllers
-//app.MapControllers();
-
-//app.Run();
-
-
+app.Run();
