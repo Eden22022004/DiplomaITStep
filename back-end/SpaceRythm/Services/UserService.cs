@@ -16,6 +16,7 @@ using System.Net.Http;
 
 namespace SpaceRythm.Services
 {
+
     public class UserService : IUserService
     {
         private readonly MyDbContext _context;
@@ -176,6 +177,7 @@ namespace SpaceRythm.Services
             user.Username = req.Username ?? user.Username; 
             user.ProfileImage = req.ProfileImage ?? user.ProfileImage;
             user.Biography = req.Biography ?? user.Biography;
+
             if (!string.IsNullOrEmpty(req.Password))
             {
                 user.Password = PasswordHash.Hash(req.Password);
@@ -331,5 +333,4 @@ namespace SpaceRythm.Services
     }
 }
    
-
 

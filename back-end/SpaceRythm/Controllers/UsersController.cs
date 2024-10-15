@@ -14,9 +14,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.Facebook;
 
 
-
 namespace SpaceRythm.Controllers;
-
 
 [ApiController]
 [Route("api/[controller]")]
@@ -104,7 +102,6 @@ public class UsersController : ControllerBase
         }
     }
 
-
     // Завантаження профілю зображення
     [HttpPost("upload-avatar")]
     public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
@@ -140,7 +137,7 @@ public class UsersController : ControllerBase
         return Ok(new { avatarPath });
     }
 
-   
+
     [HttpPost("authenticate")]
     public async Task<IActionResult> Authenticate(AuthenticateRequest req)
     {
@@ -151,7 +148,6 @@ public class UsersController : ControllerBase
 
         return Ok(res);
     }
-
 
     [HttpGet("google")]
     public IActionResult GoogleLogin()
@@ -234,8 +230,7 @@ public class UsersController : ControllerBase
         return Redirect($"{redirectUri}?token={authenticateResponse.JwtToken}");
     }
 
- 
-
+    // Перевірка, чи поточний user is an admin
     [HttpPost("isAdmin")]
     public IActionResult IsAdmin()
     {
@@ -348,5 +343,4 @@ public class UsersController : ControllerBase
     //    await _userService.Delete(id);
     //    return Ok();
     //}
-
 }
