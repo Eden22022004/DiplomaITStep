@@ -27,6 +27,7 @@ public interface IUserService
     Task FollowUser(int followerId, int followeeId);
     Task<IEnumerable<FollowerDto>> GetFollowers(int userId);
     Task ChangePassword(int userId, ChangePasswordRequest request);
+
     //Task<bool> Delete(string id);
     Task <bool> Delete(int id);
     //Task<bool> VerifyFacebookRequest(string accessToken);
