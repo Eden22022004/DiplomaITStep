@@ -336,9 +336,36 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
+        var result = await _userService.Delete(id);
+        if (!result)
+            return NotFound(new { message = "User not found" });
+
+        return Ok(new { message = "User deleted successfully" });
+    }
+
+    [HttpPost("delete")]
+    public async Task<IActionResult> DeleteFacebookUser([FromBody] FacebookDeletionRequest request)
+    {
+        // Use the AccessToken from the request
+        var userIdString = await _userService.VerifyFacebookRequest(request.AccessToken); // Use AccessToken instead of UserId
+
+        if (string.IsNullOrEmpty(userIdString)) // Check if userId is null or empty
+        {
+            return BadRequest(new { message = "Invalid request" });
+        }
+
+        // Convert userIdString to int
+        if (!int.TryParse(userIdString, out int userId)) // This tries to parse the string to an integer
+        {
+            return BadRequest(new { message = "Invalid user ID format" }); // Handle invalid format
+        }
+
+        await _userService.Delete(userId); // Call Delete with the integer userId
+        return Ok(new { message = "User data deleted successfully" });
     }
 
     // Admin-доступ, щоб видалити користувача за id
