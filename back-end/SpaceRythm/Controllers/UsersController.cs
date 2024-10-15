@@ -78,7 +78,6 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
-
     [HttpPost]
     public async Task<IActionResult> Create(CreateUserRequest req)
     {
@@ -236,6 +235,7 @@ public class UsersController : ControllerBase
     }
 
  
+
     [HttpPost("isAdmin")]
     public IActionResult IsAdmin()
     {
