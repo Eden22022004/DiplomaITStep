@@ -1,7 +1,10 @@
-﻿using SpaceRythm.DTOs;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
+using SpaceRythm.DTOs;
 using SpaceRythm.Entities;
 using SpaceRythm.Models.User;
 using System.Security.Claims;
+using ResetPasswordRequest = SpaceRythm.Models.User.ResetPasswordRequest;
 
 
 
@@ -10,7 +13,7 @@ namespace SpaceRythm.Interfaces;
 public interface IUserService
 {
     Task<IEnumerable<User>> GetAll();
-    Task<User> GetById(string id);
+    Task<User> GetById(int id);
 
     Task<User> GetByUsername(string username);
 
@@ -30,7 +33,10 @@ public interface IUserService
     Task <bool> Delete(int id);
     //Task<bool> VerifyFacebookRequest(string accessToken);
     Task<string> VerifyFacebookRequest(string accessToken);
-
-    Task Delete(int id);
+    //Task<string> GeneratePasswordResetToken(string email); 
+    //Task<string> GenerateEmailConfirmationToken(string email);
+    Task<IdentityResult> ConfirmEmailAsync(User user, string token);
+    Task<bool> ResetPassword(ResetPasswordRequest request);
+    Task<bool> ResetPasswordAsync(string email, string token, string newPassword);
 }
 

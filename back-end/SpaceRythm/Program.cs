@@ -46,18 +46,15 @@ app.Run();
 // Method to configure services
 void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
-    // Load JWT settings
     var jwtSettingsSection = configuration.GetSection("JwtSettings");
     var jwtSettings = jwtSettingsSection.Get<JwtSettings>();
 
     services.Configure<JwtSettings>(jwtSettingsSection);
 
-    // MySQL connection
     var connectionString = configuration.GetConnectionString("DefaultConnection");
     services.AddDbContext<MyDbContext>(options =>
         options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-    // Add session services
     services.AddSession(options =>
     {
         options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -66,7 +63,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     services.AddHttpClient();
 
-    // Authentication configuration (JWT and Cookies)
+    var emailOptions = builder.Configuration.GetSection("EmailSender").Get<EmailHelperOptions>() ?? throw new InvalidOperationException("Email Sender options not found.");
+
+    var requireEmailConfirmed = configuration.GetValue<bool>("RequireConfirmedEmail");
+
+    // Налаштування автентифікації (JWT і Cookies)
     services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -152,11 +153,20 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         };
     });
 
-    // Add custom services
+    services.AddEmailHelper(emailOptions);
+
+    // Налаштування політики паролів вручну
+    services.Configure<PasswordOptions>(options =>
+    {
+        options.RequireDigit = true;
+        options.RequireNonAlphanumeric = true;
+        options.RequiredLength = 10;
+    });
+
     services.AddScoped<IUserService, UserService>();
+    services.AddScoped<TokenService>();
     services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
-    // Add controllers and Razor Pages
     services.AddControllers();
     services.AddRazorPages();
 }
@@ -170,16 +180,17 @@ void ConfigureMiddleware(WebApplication app)
         app.UseHsts();
     }
 
-    app.UseSession(); // Move this line here
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
+    app.UseRouting();
+
+    app.UseSession();
 
     app.UseCookiePolicy(new CookiePolicyOptions
     {
         MinimumSameSitePolicy = SameSiteMode.Lax,
         Secure = CookieSecurePolicy.Always,
     });
-
-    app.UseHttpsRedirection();
-    app.UseRouting();
 
     app.UseAuthentication();
     app.UseAuthorization();

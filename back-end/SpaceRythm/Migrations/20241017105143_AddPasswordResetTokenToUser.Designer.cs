@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SpaceRythm.Data;
 
@@ -11,9 +12,11 @@ using SpaceRythm.Data;
 namespace SpaceRythm.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    partial class MyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241017105143_AddPasswordResetTokenToUser")]
+    partial class AddPasswordResetTokenToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,7 +60,7 @@ namespace SpaceRythm.Migrations
                             ActionType = "UserCreated",
                             AdminId = 1,
                             TargetId = 1,
-                            Timestamp = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9426)
+                            Timestamp = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3485)
                         },
                         new
                         {
@@ -65,7 +68,7 @@ namespace SpaceRythm.Migrations
                             ActionType = "TrackUploaded",
                             AdminId = 1,
                             TargetId = 1,
-                            Timestamp = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9428)
+                            Timestamp = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3487)
                         });
                 });
 
@@ -184,7 +187,7 @@ namespace SpaceRythm.Migrations
                         {
                             CommentId = 1,
                             Content = "Great track!",
-                            PostedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9302),
+                            PostedDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3351),
                             TrackId = 1,
                             UserId = 2
                         },
@@ -192,7 +195,7 @@ namespace SpaceRythm.Migrations
                         {
                             CommentId = 2,
                             Content = "I love this!",
-                            PostedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9304),
+                            PostedDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3353),
                             TrackId = 2,
                             UserId = 1
                         });
@@ -222,13 +225,13 @@ namespace SpaceRythm.Migrations
                         {
                             UserId = 1,
                             FollowedUserId = 2,
-                            FollowDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9321)
+                            FollowDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3376)
                         },
                         new
                         {
                             UserId = 2,
                             FollowedUserId = 1,
-                            FollowDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9323)
+                            FollowDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3378)
                         });
                 });
 
@@ -256,13 +259,13 @@ namespace SpaceRythm.Migrations
                         {
                             UserId = 1,
                             TrackId = 1,
-                            LikedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9366)
+                            LikedDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3420)
                         },
                         new
                         {
                             UserId = 2,
                             TrackId = 2,
-                            LikedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9367)
+                            LikedDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3423)
                         });
                 });
 
@@ -302,7 +305,7 @@ namespace SpaceRythm.Migrations
                         new
                         {
                             PlaylistId = 1,
-                            CreatedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9243),
+                            CreatedDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3291),
                             Description = "This is my first playlist",
                             IsPublic = true,
                             Title = "My First Playlist",
@@ -311,7 +314,7 @@ namespace SpaceRythm.Migrations
                         new
                         {
                             PlaylistId = 2,
-                            CreatedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9245),
+                            CreatedDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Local).AddTicks(3293),
                             Description = "A playlist for relaxation",
                             IsPublic = true,
                             Title = "Chill Vibes",
@@ -341,13 +344,13 @@ namespace SpaceRythm.Migrations
                         {
                             PlaylistId = 1,
                             TrackId = 1,
-                            AddedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9343)
+                            AddedDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3399)
                         },
                         new
                         {
                             PlaylistId = 2,
                             TrackId = 2,
-                            AddedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9344)
+                            AddedDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3400)
                         });
                 });
 
@@ -404,16 +407,16 @@ namespace SpaceRythm.Migrations
                         new
                         {
                             SubscriptionId = 1,
-                            SubscriptionEndDate = new DateTime(2025, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9390),
-                            SubscriptionStartDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9390),
+                            SubscriptionEndDate = new DateTime(2025, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3448),
+                            SubscriptionStartDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3447),
                             Type = 1,
                             UserId = 1
                         },
                         new
                         {
                             SubscriptionId = 2,
-                            SubscriptionEndDate = new DateTime(2024, 11, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9402),
-                            SubscriptionStartDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9401),
+                            SubscriptionEndDate = new DateTime(2024, 11, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3459),
+                            SubscriptionStartDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3459),
                             Type = 0,
                             UserId = 2
                         });
@@ -478,7 +481,7 @@ namespace SpaceRythm.Migrations
                             Genre = "Pop",
                             Tags = "tag1,tag2",
                             Title = "Track One",
-                            UploadDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9273)
+                            UploadDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3323)
                         },
                         new
                         {
@@ -490,7 +493,7 @@ namespace SpaceRythm.Migrations
                             Genre = "Rock",
                             Tags = "tag3,tag4",
                             Title = "Track Two",
-                            UploadDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9275)
+                            UploadDate = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3325)
                         });
                 });
 
@@ -531,15 +534,9 @@ namespace SpaceRythm.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
-
                     b.Property<string>("Biography")
                         .HasColumnType("TEXT")
                         .HasColumnName("biography");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("DateJoined")
                         .HasColumnType("datetime(6)")
@@ -551,27 +548,12 @@ namespace SpaceRythm.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("email");
 
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<bool>("IsAdmin")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("IsEmailConfirmed")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("is_email_confirmed");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("NormalizedEmail")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("NormalizedUserName")
-                        .HasColumnType("longtext");
 
                     b.Property<string>("OAuthProvider")
                         .HasMaxLength(50)
@@ -584,19 +566,10 @@ namespace SpaceRythm.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("password_hash");
 
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("longtext");
-
                     b.Property<string>("PasswordResetToken")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
                         .HasColumnName("password_reset_token");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("longtext");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<string>("ProfileImage")
                         .HasMaxLength(255)
@@ -606,15 +579,6 @@ namespace SpaceRythm.Migrations
                     b.Property<DateTime?>("ResetTokenExpires")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("reset_token_expires");
-
-                    b.Property<string>("SecurityStamp")
-                        .HasColumnType("longtext");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("UserName")
-                        .HasColumnType("longtext");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -630,39 +594,25 @@ namespace SpaceRythm.Migrations
                         new
                         {
                             Id = 1,
-                            AccessFailedCount = 0,
                             Biography = "Biography of user 1",
-                            ConcurrencyStamp = "4a376fdd-c6d0-407a-8287-41df07759431",
-                            DateJoined = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9196),
+                            DateJoined = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3245),
                             Email = "user1@example.com",
-                            EmailConfirmed = false,
                             IsAdmin = false,
                             IsEmailConfirmed = true,
-                            LockoutEnabled = false,
                             Password = "hashedpassword1",
-                            PhoneNumberConfirmed = false,
                             ProfileImage = "avatar1.png",
-                            SecurityStamp = "971a4ed5-4867-4681-b74d-3f4d30e184f7",
-                            TwoFactorEnabled = false,
                             Username = "user1"
                         },
                         new
                         {
                             Id = 2,
-                            AccessFailedCount = 0,
                             Biography = "Biography of user 2",
-                            ConcurrencyStamp = "a6e0f557-f5e5-4308-b1ee-0519d04ec7b5",
-                            DateJoined = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9202),
+                            DateJoined = new DateTime(2024, 10, 17, 10, 51, 43, 180, DateTimeKind.Utc).AddTicks(3249),
                             Email = "user2@example.com",
-                            EmailConfirmed = false,
                             IsAdmin = false,
                             IsEmailConfirmed = true,
-                            LockoutEnabled = false,
                             Password = "hashedpassword2",
-                            PhoneNumberConfirmed = false,
                             ProfileImage = "avatar2.png",
-                            SecurityStamp = "08ae8d97-f992-4264-bd79-f0e4307e62af",
-                            TwoFactorEnabled = false,
                             Username = "user2"
                         });
                 });

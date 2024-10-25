@@ -5,9 +5,7 @@ using SpaceRythm.Models.User;
 using SpaceRythm.Util;
 
 
-
 namespace SpaceRythm.Entities;
-
 
 public class User 
 {
@@ -47,6 +45,13 @@ public class User
 
     [Column("is_email_confirmed")]
     public bool IsEmailConfirmed { get; set; } = false; // Значення за замовчуванням
+
+    [MaxLength(255)]
+    [Column("password_reset_token")]
+    public string? PasswordResetToken { get; set; }
+
+    [Column("reset_token_expires")]
+    public DateTime? ResetTokenExpires { get; set; }
 
     // Навігаційні властивості
     public List<SongLiked> SongsLiked { get; set; } = new List<SongLiked>();
