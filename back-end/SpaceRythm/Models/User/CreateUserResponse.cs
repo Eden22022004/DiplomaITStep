@@ -10,12 +10,14 @@ public class CreateUserResponse
     public string Biography { get; set; }
     public DateTime DateJoined { get; set; }
     public bool IsEmailConfirmed { get; set; }
-
+    public string EmailConfirmationToken { get; set; }
     public List<string> SongsLiked { get; set; }
     public List<string> ArtistsLiked { get; set; }
     public List<string> CategoriesLiked { get; set; }
 
-    public CreateUserResponse(Entities.User user, string token)
+    public bool Succeeded { get; set; }
+
+    public CreateUserResponse(Entities.User user, string token, bool succeeded, string emailConfirmationToken)
     {
         Id = user.Id; 
         Email = user.Email;
@@ -25,9 +27,13 @@ public class CreateUserResponse
         Biography = user.Biography;
         DateJoined = user.DateJoined;
         IsEmailConfirmed = user.IsEmailConfirmed;
+        EmailConfirmationToken = emailConfirmationToken;
+        Succeeded = succeeded;
 
         SongsLiked = user.SongsLiked.Select(s => s.SongId.ToString()).ToList();
         ArtistsLiked = user.ArtistsLiked.Select(a => a.ArtistId.ToString()).ToList();
         CategoriesLiked = user.CategoriesLiked.Select(c => c.CategoryId.ToString()).ToList();
     }
+
+   
 }

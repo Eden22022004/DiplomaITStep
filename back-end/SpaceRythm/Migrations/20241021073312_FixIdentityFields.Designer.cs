@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SpaceRythm.Data;
 
@@ -11,9 +12,11 @@ using SpaceRythm.Data;
 namespace SpaceRythm.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    partial class MyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241021073312_FixIdentityFields")]
+    partial class FixIdentityFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,7 +60,7 @@ namespace SpaceRythm.Migrations
                             ActionType = "UserCreated",
                             AdminId = 1,
                             TargetId = 1,
-                            Timestamp = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9426)
+                            Timestamp = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(6011)
                         },
                         new
                         {
@@ -65,7 +68,7 @@ namespace SpaceRythm.Migrations
                             ActionType = "TrackUploaded",
                             AdminId = 1,
                             TargetId = 1,
-                            Timestamp = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9428)
+                            Timestamp = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(6013)
                         });
                 });
 
@@ -184,7 +187,7 @@ namespace SpaceRythm.Migrations
                         {
                             CommentId = 1,
                             Content = "Great track!",
-                            PostedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9302),
+                            PostedDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(5869),
                             TrackId = 1,
                             UserId = 2
                         },
@@ -192,7 +195,7 @@ namespace SpaceRythm.Migrations
                         {
                             CommentId = 2,
                             Content = "I love this!",
-                            PostedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9304),
+                            PostedDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(5871),
                             TrackId = 2,
                             UserId = 1
                         });
@@ -222,13 +225,13 @@ namespace SpaceRythm.Migrations
                         {
                             UserId = 1,
                             FollowedUserId = 2,
-                            FollowDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9321)
+                            FollowDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(5891)
                         },
                         new
                         {
                             UserId = 2,
                             FollowedUserId = 1,
-                            FollowDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9323)
+                            FollowDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(5894)
                         });
                 });
 
@@ -256,13 +259,13 @@ namespace SpaceRythm.Migrations
                         {
                             UserId = 1,
                             TrackId = 1,
-                            LikedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9366)
+                            LikedDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(5934)
                         },
                         new
                         {
                             UserId = 2,
                             TrackId = 2,
-                            LikedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9367)
+                            LikedDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(5935)
                         });
                 });
 
@@ -302,7 +305,7 @@ namespace SpaceRythm.Migrations
                         new
                         {
                             PlaylistId = 1,
-                            CreatedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9243),
+                            CreatedDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(5814),
                             Description = "This is my first playlist",
                             IsPublic = true,
                             Title = "My First Playlist",
@@ -311,7 +314,7 @@ namespace SpaceRythm.Migrations
                         new
                         {
                             PlaylistId = 2,
-                            CreatedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Local).AddTicks(9245),
+                            CreatedDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Local).AddTicks(5816),
                             Description = "A playlist for relaxation",
                             IsPublic = true,
                             Title = "Chill Vibes",
@@ -341,13 +344,13 @@ namespace SpaceRythm.Migrations
                         {
                             PlaylistId = 1,
                             TrackId = 1,
-                            AddedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9343)
+                            AddedDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5911)
                         },
                         new
                         {
                             PlaylistId = 2,
                             TrackId = 2,
-                            AddedDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9344)
+                            AddedDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5913)
                         });
                 });
 
@@ -404,16 +407,16 @@ namespace SpaceRythm.Migrations
                         new
                         {
                             SubscriptionId = 1,
-                            SubscriptionEndDate = new DateTime(2025, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9390),
-                            SubscriptionStartDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9390),
+                            SubscriptionEndDate = new DateTime(2025, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5958),
+                            SubscriptionStartDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5958),
                             Type = 1,
                             UserId = 1
                         },
                         new
                         {
                             SubscriptionId = 2,
-                            SubscriptionEndDate = new DateTime(2024, 11, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9402),
-                            SubscriptionStartDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9401),
+                            SubscriptionEndDate = new DateTime(2024, 11, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5980),
+                            SubscriptionStartDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5979),
                             Type = 0,
                             UserId = 2
                         });
@@ -478,7 +481,7 @@ namespace SpaceRythm.Migrations
                             Genre = "Pop",
                             Tags = "tag1,tag2",
                             Title = "Track One",
-                            UploadDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9273)
+                            UploadDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5843)
                         },
                         new
                         {
@@ -490,7 +493,7 @@ namespace SpaceRythm.Migrations
                             Genre = "Rock",
                             Tags = "tag3,tag4",
                             Title = "Track Two",
-                            UploadDate = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9275)
+                            UploadDate = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5846)
                         });
                 });
 
@@ -632,8 +635,8 @@ namespace SpaceRythm.Migrations
                             Id = 1,
                             AccessFailedCount = 0,
                             Biography = "Biography of user 1",
-                            ConcurrencyStamp = "4a376fdd-c6d0-407a-8287-41df07759431",
-                            DateJoined = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9196),
+                            ConcurrencyStamp = "714eaac4-97b4-49aa-a32e-2e8d3a4959d3",
+                            DateJoined = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5729),
                             Email = "user1@example.com",
                             EmailConfirmed = false,
                             IsAdmin = false,
@@ -642,7 +645,7 @@ namespace SpaceRythm.Migrations
                             Password = "hashedpassword1",
                             PhoneNumberConfirmed = false,
                             ProfileImage = "avatar1.png",
-                            SecurityStamp = "971a4ed5-4867-4681-b74d-3f4d30e184f7",
+                            SecurityStamp = "dd275890-3b4d-439b-82df-c5cfb4b14553",
                             TwoFactorEnabled = false,
                             Username = "user1"
                         },
@@ -651,8 +654,8 @@ namespace SpaceRythm.Migrations
                             Id = 2,
                             AccessFailedCount = 0,
                             Biography = "Biography of user 2",
-                            ConcurrencyStamp = "a6e0f557-f5e5-4308-b1ee-0519d04ec7b5",
-                            DateJoined = new DateTime(2024, 10, 21, 8, 3, 20, 279, DateTimeKind.Utc).AddTicks(9202),
+                            ConcurrencyStamp = "7bdd07af-c747-4f80-97dd-20ff544e38ea",
+                            DateJoined = new DateTime(2024, 10, 21, 7, 33, 11, 331, DateTimeKind.Utc).AddTicks(5761),
                             Email = "user2@example.com",
                             EmailConfirmed = false,
                             IsAdmin = false,
@@ -661,7 +664,7 @@ namespace SpaceRythm.Migrations
                             Password = "hashedpassword2",
                             PhoneNumberConfirmed = false,
                             ProfileImage = "avatar2.png",
-                            SecurityStamp = "08ae8d97-f992-4264-bd79-f0e4307e62af",
+                            SecurityStamp = "233bf4d2-7813-455c-bc88-2eae2a91e3d5",
                             TwoFactorEnabled = false,
                             Username = "user2"
                         });

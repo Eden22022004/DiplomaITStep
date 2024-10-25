@@ -4,6 +4,7 @@ using SpaceRythm.Entities;
 using SpaceRythm.Data;
 using SpaceRythm.Attributes;
 using SpaceRythm.Interfaces;
+using SpaceRythm.Models;
 using SpaceRythm.Models.User;
 using Org.BouncyCastle.Ocsp;
 using SpaceRythm.DTOs;
@@ -12,6 +13,11 @@ using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.Facebook;
+using Microsoft.AspNetCore.Identity.Data;
+using ResetPasswordRequest = SpaceRythm.Models.User.ResetPasswordRequest;
+using ForgotPasswordRequest = SpaceRythm.Models.User.ForgotPasswordRequest;
+using Microsoft.AspNetCore.Authorization;
+using SpaceRythm.Services;
 
 
 namespace SpaceRythm.Controllers;
@@ -20,11 +26,15 @@ namespace SpaceRythm.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IUserService _userService; 
+    private readonly EmailHelper _emailHelper;
+    private readonly TokenService _tokenService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, EmailHelper emailHelper, TokenService tokenService)
     {
         _userService = userService;
+        _emailHelper = emailHelper;
+        _tokenService = tokenService;
     }
 
     // Get users
@@ -35,18 +45,9 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
-    // Admin-досту, щоб get all users
-    //[Admin]
-    //[HttpGet("/api/[controller]")]
-    //public async Task<IActionResult> Get()
-    //{
-    //    var users = await _userService.GetAll();
-    //    return Ok(users);
-    //}
-
     // Отримати конкретного user по id
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetUserById(string id)
+    public async Task<IActionResult> GetUserById(int id)
     {
         var user = await _userService.GetById(id);
         if (user == null)
@@ -76,13 +77,16 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
+    private bool SendEmail(string recipientEmail, string subject, string message)
+    {
+        return _emailHelper.SendEmail(recipientEmail, message, subject);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(CreateUserRequest req)
     {
-        // Логування отриманих даних
         Console.WriteLine($"Received data: Email={req.Email}, Username={req.Username}, Password={req.Password}");
 
-        // Перевірка, чи дійсно всі дані отримані
         if (string.IsNullOrEmpty(req.Email) || string.IsNullOrEmpty(req.Username) || string.IsNullOrEmpty(req.Password))
         {
             return BadRequest(new { message = "Email, Username, and Password are required" });
@@ -90,17 +94,62 @@ public class UsersController : ControllerBase
 
         try
         {
+            // Створюємо користувача
             var res = await _userService.Create(req);
-            Console.WriteLine($"User created successfully: {res.Username}");
-            return Ok(res);
+            Console.WriteLine($"!!!User : {res.Id} + {res.Email} + {res.Username}");
+
+            // Перевірка, чи користувач успішно створений
+            if (res != null && res.Id > 0)
+            {
+                Console.WriteLine($"User created successfully: {res.Username}");
+
+                // Логіка для генерації токену підтвердження електронної пошти
+                string emailConfirmationToken = await _tokenService.GenerateEmailConfirmationToken(res.Email);
+                string confirmationLink = Url.Action("ConfirmEmail", "Users", new { token = emailConfirmationToken, email = res.Email }, Request.Scheme);
+                Console.WriteLine($"Controller Create confirmationLink: {confirmationLink}");
+
+                // Відправка листа з посиланням на підтвердження
+                //EmailHelper emailHelper = new EmailHelper();
+
+                if (SendEmail(res.Email, "Ви успішно зареєстровані в Space Rythm", confirmationLink))
+                {
+                    return Ok(new { message = "User created successfully. Please confirm your email." });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Error occurred while sending confirmation email." });
+                }
+            }
+            else
+            {
+                return BadRequest(new { message = "User creation failed." });
+            }
         }
         catch (Exception e)
         {
             Console.WriteLine($"Error occurred: {e.Message}");
-            // Повертаємо повідомлення про помилку з деталями для налагодження
             return BadRequest(new { message = $"An error occurred: {e.Message}" });
         }
     }
+
+
+    [HttpGet("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail(string token, string email)
+    {
+        var user = await _userService.GetByEmail(email);
+        if (user == null) return BadRequest("Invalid email.");
+
+        var result = await _userService.ConfirmEmailAsync(user, token);
+        if (result.Succeeded)
+        {
+            return Ok("Email confirmed successfully.");
+        }
+        else
+        {
+            return BadRequest("Error confirming your email.");
+        }
+    }
+
 
     // Завантаження профілю зображення
     [HttpPost("upload-avatar")]
@@ -137,17 +186,50 @@ public class UsersController : ControllerBase
         return Ok(new { avatarPath });
     }
 
-
     [HttpPost("authenticate")]
+    [AllowAnonymous]
     public async Task<IActionResult> Authenticate(AuthenticateRequest req)
     {
-        var res = await _userService.Authenticate(req);
+        try
+        {
+            // Call the Authenticate method in the service
+            var response = await _userService.Authenticate(req);
 
-        if (res == null)
-            return BadRequest(new { message = "Username or password incorrect" });
+            // If the response is null, the username or password is incorrect
+            if (response == null)
+            {
+                // Add model state error for incorrect credentials
+                ModelState.AddModelError("", "Username or password incorrect");
+                return BadRequest(new { message = "Username or password incorrect" });
+            }
 
-        return Ok(res);
+            // If authentication succeeded, return the response
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            // Handle the error for email not confirmed or other issues
+            if (ex.Message.Contains("Email not confirmed"))
+            {
+                ModelState.AddModelError(nameof(req.Email), "Email not confirmed. Please check your inbox and confirm your email.");
+                return BadRequest(new { message = ex.Message });
+            }
+
+            // General error handling for username/password or other issues
+            return BadRequest(new { message = ex.Message });
+        }
     }
+
+    //[HttpPost("authenticate")]
+    //public async Task<IActionResult> Authenticate(AuthenticateRequest req)
+    //{
+    //    var res = await _userService.Authenticate(req);
+
+    //    if (res == null)
+    //        return BadRequest(new { message = "Username or password incorrect" });
+
+    //    return Ok(res);
+    //}
 
     [HttpGet("google")]
     public IActionResult GoogleLogin()
@@ -333,6 +415,93 @@ public class UsersController : ControllerBase
 
         await _userService.Delete(userId); // Call Delete with the integer userId
         return Ok(new { message = "User data deleted successfully" });
+    }
+
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromForm] ForgotPasswordRequest model)
+    {
+        Console.WriteLine("Controller HttpPost(\"forgot-password\")");
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var user = await _userService.GetByEmail(model.Email);
+        if (user == null)
+        {
+            return NotFound(new { message = "User with this email does not exist." });
+        }
+
+        var token = await _tokenService.GeneratePasswordResetToken(user.Email);
+        var url = Url.Action("ResetPassword", "Users", new { email = user.Email, token }, Request.Scheme);
+        Console.WriteLine("---url " + url);
+        bool result = _emailHelper.SendEmailResetPassword(user.Email, url);
+        if (!result)
+        {
+            return StatusCode(500, new { message = "Error occurred while sending email." });
+        }
+
+        return Ok(new { message = "Password reset link sent to email." });
+    }
+
+    [HttpGet("forgot-password")]
+    [AllowAnonymous]
+    public IActionResult ForgotPassword()
+    {
+        Console.WriteLine("Controller HttpGet(\"forgot-password\")");
+        return Ok(new { message = "Enter your email to reset the password." });
+    }
+
+    [HttpGet("forgot-password-confirmation")]
+    [AllowAnonymous]
+    public IActionResult ForgotPasswordConfirmation()
+    {
+        return Ok(new { message = "Password reset confirmation page" });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // Получите пользователя по email
+        var user = await _userService.GetByEmail(model.Email);
+        if (user == null)
+        {
+            return NotFound(new { message = "User with this email does not exist." });
+        }
+        
+        // Проверьте токен (возможно, с помощью вашего TokenService)
+        var isValidToken = await _tokenService.VerifyPasswordResetToken(model.Email, model.Token);
+        if (!isValidToken)
+        {
+            return BadRequest(new { message = "Invalid or expired token." });
+        }
+
+        // Измените пароль
+        var isResetSuccessful = await _userService.ResetPasswordAsync(model.Email, model.Token, model.ConfirmPassword);
+        if (!isResetSuccessful)
+        {
+            return StatusCode(500, new { message = "Error occurred while resetting password." });
+        }
+
+        return Ok(new { message = "Password has been successfully reset." });
+    }
+
+    [HttpGet("reset-password")]
+    [AllowAnonymous]
+    public IActionResult ResetPassword(string email, string token)
+    {
+        // Можно добавить проверку токена, если это необходимо
+
+        // Вместо возвращения представления, просто возвращаем JSON
+        return Ok(new { Email = email, Token = token });
     }
 
     // Admin-доступ, щоб видалити користувача за id

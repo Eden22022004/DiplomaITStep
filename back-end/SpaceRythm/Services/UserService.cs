@@ -13,21 +13,30 @@ using SpaceRythm.DTOs;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using System.Net.Http;
+using Microsoft.AspNetCore.Identity.Data;
+using ResetPasswordRequest = SpaceRythm.Models.User.ResetPasswordRequest;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Org.BouncyCastle.Ocsp;
 
 namespace SpaceRythm.Services
 {
-
     public class UserService : IUserService
     {
         private readonly MyDbContext _context;
         private readonly JwtSettings _jwtSettings;
         private readonly HttpClient _httpClient;
+        private readonly TokenService _tokenService;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public UserService(MyDbContext context, IOptions<JwtSettings> jwtOptions, HttpClient httpClient)
+        public UserService(MyDbContext context, IOptions<JwtSettings> jwtOptions, HttpClient httpClient, TokenService tokenService, IPasswordHasher<User> passwordHasher)
         {
             _context = context;
             _jwtSettings = jwtOptions.Value;
             _httpClient = httpClient;
+            _tokenService = tokenService;
+            _passwordHasher = passwordHasher;
         }
 
         public async Task<IEnumerable<User>> GetAll()
@@ -35,7 +44,7 @@ namespace SpaceRythm.Services
             return await _context.Users.ToListAsync();
         }
 
-        public async Task<User> GetById(string id)
+        public async Task<User> GetById(int id)
         {
             return await _context.Users.FindAsync(id);
         }
@@ -50,38 +59,121 @@ namespace SpaceRythm.Services
             return await _context.Users.SingleOrDefaultAsync(u => u.Email == email);
         }
 
+
         public async Task<CreateUserResponse> Create(CreateUserRequest req)
         {
+            Console.WriteLine("req.Email" + req.Email);
+            if (!IsValidEmail(req.Email))
+            {
+                throw new ArgumentException("Invalid email format.");
+            }
             var user = new User(req);
+            user.Password = _passwordHasher.HashPassword(user, req.Password);
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+            Console.WriteLine("!!!new user created" + req);
 
-            string token = Jwt.GenerateToken(_jwtSettings, user);
+            if (user.Id > 0)
+            {
+                Console.WriteLine("!!!if (user.Id > 0)");
+                //string token = Jwt.GenerateToken(_jwtSettings, user);
+                string token = _tokenService.GenerateToken(_jwtSettings, user);
 
-            return new CreateUserResponse(user, token); 
-           
+                // Генерація токену підтвердження електронної пошти
+                string emailConfirmationToken = await _tokenService.GenerateEmailConfirmationToken(user.Email);
+
+                // Повертаємо результат без відправлення листа тут
+                return new CreateUserResponse(user, token, false, emailConfirmationToken)
+                {
+                    IsEmailConfirmed = false,
+                    EmailConfirmationToken = emailConfirmationToken // Можливо, вам знадобиться зберегти токен
+                };
+            }
+            throw new Exception("User creation failed.");
+        }
+ 
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var mailAddress = new System.Net.Mail.MailAddress(email);
+                return mailAddress.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
+        public async Task<IdentityResult> ConfirmEmailAsync(User user, string token)
+        {
+            var userFromDb = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+
+            if (userFromDb == null)
+            {
+                return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+            }
+
+            // Verify the token (you can use JwtSecurityTokenHandler to validate it)
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_jwtSettings.Key);
+
+            try
+            {
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.Zero
+                }, out SecurityToken validatedToken);
+
+                // If the token is valid, confirm the email
+                userFromDb.IsEmailConfirmed = true;
+                _context.Users.Update(userFromDb);
+                await _context.SaveChangesAsync();
+
+                return IdentityResult.Success;
+            }
+            catch
+            {
+                return IdentityResult.Failed(new IdentityError { Description = "Invalid token." });
+            }
+        }
+      
         public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest req)
         {
             Console.WriteLine($"Attempting to authenticate user with username: {req.Username}");
 
-
+            // Step 1: Find user by username
             var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == req.Username);
             if (user == null)
             {
                 Console.WriteLine($"User with username {req.Username} not found.");
-                throw new Exception("User not found");
+                throw new Exception("Username or password incorrect");
             }
 
+            // Step 2: Check if the user's email is confirmed
+            if (!user.IsEmailConfirmed)
+            {
+                Console.WriteLine($"Email not confirmed for user {req.Username}.");
+                throw new Exception("Email not confirmed. Please check your inbox and confirm your email.");
+            }
+
+            // Step 3: Verify password
             if (!PasswordHash.Verify(req.Password, user.Password))
             {
                 Console.WriteLine($"Invalid password for user {req.Username}.");
-                throw new Exception("Invalid password");
+                throw new Exception("Username or password incorrect");
             }
+
+            // Step 4: Generate JWT token after successful verification
             Console.WriteLine($"Password verification succeeded for user {req.Username}. Generating JWT token...");
-            string token = Jwt.GenerateToken(_jwtSettings, user);
+            string token = _tokenService.GenerateToken(_jwtSettings, user);
             Console.WriteLine($"JWT token generated successfully for user {req.Username}.");
+
+            // Step 5: Return the authentication response
             return new AuthenticateResponse(user, token);
         }
         public async Task<AuthenticateResponse> AuthenticateWithOAuth(ClaimsPrincipal claimsPrincipal)
@@ -116,54 +208,32 @@ namespace SpaceRythm.Services
                 };
             }
 
-            var token  = Jwt.GenerateToken(_jwtSettings, user);
+            var token = _tokenService.GenerateToken(_jwtSettings, user);
 
             return new AuthenticateResponse(user, token);
             
         }
+        public async Task<bool> ResetPasswordAsync(string email, string token, string newPassword)
+        {
+            Console.WriteLine($"UserService ResetPasswordAsync");
+            var user = await GetByEmail(email);
+            if (user == null)
+                return false;
 
-        //public async Task<AuthenticateResponse> AuthenticateWithGoogle(ClaimsPrincipal claimsPrincipal)
-        //{
-        //    var email = claimsPrincipal.FindFirstValue(ClaimTypes.Email);
-        //    var username = claimsPrincipal.FindFirstValue(ClaimTypes.Name);
+            // Верифікація токена скидання паролю
+            var isTokenValid = await _tokenService.VerifyPasswordResetToken(email, token);
+            if (!isTokenValid)
+                return false;
 
-        //    // Step 1: Check if the user exists by email
-        //    var user = await GetByEmail(email);
-        //    if (user == null)
-        //    {
-        //        // If the user doesn't exist, create a new one
-        //        var createUserRequest = new CreateUserRequest
-        //        {
-        //            Email = email,
-        //            Username = username
-        //            // Add other necessary fields as required
-        //        };
+            // Хешування нового паролю та оновлення
+            user.Password = _passwordHasher.HashPassword(user, newPassword);
+         
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
 
-        //        // CreateUserResponse will be returned instead of User
-        //        var createUserResponse = await Create(createUserRequest);
+            return true;
+        }
 
-        //        // Create a User object for the AuthenticateResponse
-        //        user = new User
-        //        {
-        //            Id = createUserResponse.Id,
-        //            Email = createUserResponse.Email,
-        //            Username = createUserResponse.Username,
-        //            ProfileImage = createUserResponse.ProfileImage,
-        //            Biography = createUserResponse.Biography,
-        //            DateJoined = createUserResponse.DateJoined,
-        //            IsEmailConfirmed = createUserResponse.IsEmailConfirmed,
-        //            SongsLiked = new List<SongLiked>(), 
-        //            ArtistsLiked = new List<ArtistLiked>(), 
-        //            CategoriesLiked = new List<CategoryLiked>() 
-        //        };
-        //    }
-
-        //    // Step 2: Generate JWT token for the user
-        //    string token = Jwt.GenerateToken(_jwtSettings, user);
-
-        //    // Step 3: Return AuthenticateResponse with user data and token
-        //    return new AuthenticateResponse(user, token);
-        //}
 
         public async Task<UpdateUserResponse> Update(string id, UpdateUserRequest req)
         {
@@ -183,19 +253,12 @@ namespace SpaceRythm.Services
                 user.Password = PasswordHash.Hash(req.Password);
             }
 
-
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
             return new UpdateUserResponse
             {
-                //Id = user.Id.ToString(),
-                //Email = user.Email,
-                //Username = user.Username,
-                //ProfileImage = user.ProfileImage,
-                //Biography = user.Biography,
-                //DateJoined = user.DateJoined,
-                //IsEmailConfirmed = user.IsEmailConfirmed
+               
             };
         }
 
@@ -279,17 +342,6 @@ namespace SpaceRythm.Services
             return BCrypt.Net.BCrypt.HashPassword(password);
         }
 
-        //public async Task Delete(int id)
-        //{
-        //    var user = await _context.Users.FindAsync(id);
-        //    if (user != null)
-        //    {
-        //        _context.Users.Remove(user);
-        //        await _context.SaveChangesAsync();
-        //    }
-
-        //}
-
         public async Task<bool> Delete(int id)
         {
             var user = await _context.Users.FindAsync(id);
@@ -323,6 +375,25 @@ namespace SpaceRythm.Services
 
             return null;
         }
+
+        // 2. Скидання паролю
+        public async Task<bool> ResetPassword(ResetPasswordRequest request)
+        {
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.PasswordResetToken == request.Token);
+            if (user == null || user.ResetTokenExpires < DateTime.UtcNow)
+            {
+                throw new Exception("Invalid or expired reset token");
+            }
+
+            // Зберігаємо новий пароль
+            user.Password = HashPassword(request.NewPassword);
+            user.PasswordResetToken = null; // Скидаємо токен після використання
+            user.ResetTokenExpires = null;
+
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
     }
 
     public class FacebookUser
@@ -331,6 +402,8 @@ namespace SpaceRythm.Services
         public string Name { get; set; }
         public string Email { get; set; }
     }
+
+    
 }
    
 
