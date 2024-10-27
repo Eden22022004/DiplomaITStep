@@ -6,17 +6,6 @@ using SpaceRythm.Attributes;
 using SpaceRythm.Interfaces;
 using SpaceRythm.Models;
 using SpaceRythm.Models.User;
-using Org.BouncyCastle.Ocsp;
-using SpaceRythm.DTOs;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authentication;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authentication.Facebook;
-using Microsoft.AspNetCore.Identity.Data;
-using ResetPasswordRequest = SpaceRythm.Models.User.ResetPasswordRequest;
-using ForgotPasswordRequest = SpaceRythm.Models.User.ForgotPasswordRequest;
-using Microsoft.AspNetCore.Authorization;
 using SpaceRythm.Services;
 
 
@@ -26,23 +15,22 @@ namespace SpaceRythm.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly IUserService _userService; 
-    private readonly EmailHelper _emailHelper;
-    private readonly TokenService _tokenService;
+    private readonly IUserService _userService;
+    private readonly IUserStatisticsService _userStatisticsService;
 
-    public UsersController(IUserService userService, EmailHelper emailHelper, TokenService tokenService)
+    public UsersController(IUserService userService, IUserStatisticsService userStatisticsService)
     {
         _userService = userService;
-        _emailHelper = emailHelper;
-        _tokenService = tokenService;
+        _userStatisticsService = userStatisticsService;
     }
 
     // Get users
     [HttpGet]
-    public async Task<IActionResult> GetAllUsers()
+    public async Task<ActionResult<IEnumerable<User>>> GetAllUsers()
     {
         var users = await _userService.GetAll();
         return Ok(users);
+        //await _userService.GetAll();
     }
 
     // Отримати конкретного user по id
@@ -70,86 +58,14 @@ public class UsersController : ControllerBase
     [HttpGet("by-email/{email}")]
     public async Task<IActionResult> GetByEmail(string email)
     {
+        Console.WriteLine($"UserController Received email: {email}");
         var user = await _userService.GetByEmail(email);
+    
         if (user == null)
             return NotFound(new { message = "User not found" });
 
         return Ok(user);
     }
-
-    private bool SendEmail(string recipientEmail, string subject, string message)
-    {
-        return _emailHelper.SendEmail(recipientEmail, message, subject);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Create(CreateUserRequest req)
-    {
-        Console.WriteLine($"Received data: Email={req.Email}, Username={req.Username}, Password={req.Password}");
-
-        if (string.IsNullOrEmpty(req.Email) || string.IsNullOrEmpty(req.Username) || string.IsNullOrEmpty(req.Password))
-        {
-            return BadRequest(new { message = "Email, Username, and Password are required" });
-        }
-
-        try
-        {
-            // Створюємо користувача
-            var res = await _userService.Create(req);
-            Console.WriteLine($"!!!User : {res.Id} + {res.Email} + {res.Username}");
-
-            // Перевірка, чи користувач успішно створений
-            if (res != null && res.Id > 0)
-            {
-                Console.WriteLine($"User created successfully: {res.Username}");
-
-                // Логіка для генерації токену підтвердження електронної пошти
-                string emailConfirmationToken = await _tokenService.GenerateEmailConfirmationToken(res.Email);
-                string confirmationLink = Url.Action("ConfirmEmail", "Users", new { token = emailConfirmationToken, email = res.Email }, Request.Scheme);
-                Console.WriteLine($"Controller Create confirmationLink: {confirmationLink}");
-
-                // Відправка листа з посиланням на підтвердження
-                //EmailHelper emailHelper = new EmailHelper();
-
-                if (SendEmail(res.Email, "Ви успішно зареєстровані в Space Rythm", confirmationLink))
-                {
-                    return Ok(new { message = "User created successfully. Please confirm your email." });
-                }
-                else
-                {
-                    return BadRequest(new { message = "Error occurred while sending confirmation email." });
-                }
-            }
-            else
-            {
-                return BadRequest(new { message = "User creation failed." });
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Error occurred: {e.Message}");
-            return BadRequest(new { message = $"An error occurred: {e.Message}" });
-        }
-    }
-
-
-    [HttpGet("confirm-email")]
-    public async Task<IActionResult> ConfirmEmail(string token, string email)
-    {
-        var user = await _userService.GetByEmail(email);
-        if (user == null) return BadRequest("Invalid email.");
-
-        var result = await _userService.ConfirmEmailAsync(user, token);
-        if (result.Succeeded)
-        {
-            return Ok("Email confirmed successfully.");
-        }
-        else
-        {
-            return BadRequest("Error confirming your email.");
-        }
-    }
-
 
     // Завантаження профілю зображення
     [HttpPost("upload-avatar")]
@@ -184,132 +100,6 @@ public class UsersController : ControllerBase
         var avatarPath = await _userService.UploadAvatar(user.Id, uniqueFileName);
 
         return Ok(new { avatarPath });
-    }
-
-    [HttpPost("authenticate")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Authenticate(AuthenticateRequest req)
-    {
-        try
-        {
-            // Call the Authenticate method in the service
-            var response = await _userService.Authenticate(req);
-
-            // If the response is null, the username or password is incorrect
-            if (response == null)
-            {
-                // Add model state error for incorrect credentials
-                ModelState.AddModelError("", "Username or password incorrect");
-                return BadRequest(new { message = "Username or password incorrect" });
-            }
-
-            // If authentication succeeded, return the response
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            // Handle the error for email not confirmed or other issues
-            if (ex.Message.Contains("Email not confirmed"))
-            {
-                ModelState.AddModelError(nameof(req.Email), "Email not confirmed. Please check your inbox and confirm your email.");
-                return BadRequest(new { message = ex.Message });
-            }
-
-            // General error handling for username/password or other issues
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    //[HttpPost("authenticate")]
-    //public async Task<IActionResult> Authenticate(AuthenticateRequest req)
-    //{
-    //    var res = await _userService.Authenticate(req);
-
-    //    if (res == null)
-    //        return BadRequest(new { message = "Username or password incorrect" });
-
-    //    return Ok(res);
-    //}
-
-    [HttpGet("google")]
-    public IActionResult GoogleLogin()
-    {
-        Console.WriteLine("Google login initiated.");
-
-        // Генеруємо URL для редіректу після успішної автентифікації
-        var redirectUrl = Url.Action("GoogleResponse", "Auth", new { }, Request.Scheme);
-
-        // Формуємо параметри для зовнішньої автентифікації
-        var properties = new AuthenticationProperties
-        {
-            RedirectUri = redirectUrl
-        };
-
-        Console.WriteLine($"OAuth state before redirect: {properties.Items["state"]}");
-        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
-    }
-
-    [HttpGet("google-response")]
-    public async Task<IActionResult> GoogleResponse(string redirectUri)
-    {
-        Console.WriteLine("GoogleResponse invoked with redirectUri: " + redirectUri);
-
-        var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
-
-        if (result?.Succeeded != true)
-        {
-            Console.WriteLine("Google authentication failed.");
-            return BadRequest("Authentication failed");
-        }
-
-        Console.WriteLine("Google authentication succeeded.");
-        Console.WriteLine($"User email: {result.Principal.FindFirst(ClaimTypes.Email)?.Value}");
-
-        // Виклик UserService для автентифікації через Google
-        var authenticateResponse = await _userService.AuthenticateWithOAuth(result.Principal);
-
-        Console.WriteLine($"Generated token: {authenticateResponse.JwtToken}");
-
-        // Редірект із JWT токеном
-        return Redirect($"{redirectUri}?token={authenticateResponse.JwtToken}");
-    }
-
-    [HttpGet("facebook")]
-    public IActionResult FacebookLogin()
-    {
-        Console.WriteLine("Facebook login initiated.");
-
-        var redirectUrl = Url.Action("FacebookResponse", "Users", new { }, Request.Scheme);
-        var properties = new AuthenticationProperties
-        {
-            RedirectUri = redirectUrl
-        };
-
-        Console.WriteLine($"OAuth state before redirect: {properties.Items["state"]}");
-        return Challenge(properties, FacebookDefaults.AuthenticationScheme);
-    }
-
-    [HttpGet("facebook-response")]
-    public async Task<IActionResult> FacebookResponse(string redirectUri)
-    {
-        Console.WriteLine("FacebookResponse invoked with redirectUri: " + redirectUri);
-
-        var result = await HttpContext.AuthenticateAsync(FacebookDefaults.AuthenticationScheme);
-
-        if (result?.Succeeded != true)
-        {
-            Console.WriteLine("Facebook authentication failed.");
-            return BadRequest("Authentication failed");
-        }
-
-        Console.WriteLine("Facebook authentication succeeded.");
-        Console.WriteLine($"User email: {result.Principal.FindFirst(ClaimTypes.Email)?.Value}");
-
-        var authenticateResponse = await _userService.AuthenticateWithOAuth(result.Principal); 
-
-        Console.WriteLine($"Generated token: {authenticateResponse.JwtToken}");
-
-        return Redirect($"{redirectUri}?token={authenticateResponse.JwtToken}");
     }
 
     // Перевірка, чи поточний user is an admin
@@ -358,7 +148,6 @@ public class UsersController : ControllerBase
         return Ok(followers);
     }
 
-
     // Зміна пароля користувача
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
@@ -385,7 +174,6 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
-
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -396,120 +184,83 @@ public class UsersController : ControllerBase
         return Ok(new { message = "User deleted successfully" });
     }
 
-    [HttpPost("delete")]
-    public async Task<IActionResult> DeleteFacebookUser([FromBody] FacebookDeletionRequest request)
+    // Створення плейлисту
+    [HttpPost("create-playlist")]
+    public async Task<IActionResult> CreatePlaylist(string name, string description)
     {
-        // Use the AccessToken from the request
-        var userIdString = await _userService.VerifyFacebookRequest(request.AccessToken); // Use AccessToken instead of UserId
-
-        if (string.IsNullOrEmpty(userIdString)) // Check if userId is null or empty
-        {
-            return BadRequest(new { message = "Invalid request" });
-        }
-
-        // Convert userIdString to int
-        if (!int.TryParse(userIdString, out int userId)) // This tries to parse the string to an integer
-        {
-            return BadRequest(new { message = "Invalid user ID format" }); // Handle invalid format
-        }
-
-        await _userService.Delete(userId); // Call Delete with the integer userId
-        return Ok(new { message = "User data deleted successfully" });
-    }
-
-
-    [HttpPost("forgot-password")]
-    [AllowAnonymous]
-    public async Task<IActionResult> ForgotPassword([FromForm] ForgotPasswordRequest model)
-    {
-        Console.WriteLine("Controller HttpPost(\"forgot-password\")");
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        var user = await _userService.GetByEmail(model.Email);
+        var user = HttpContext.Items["User"] as User;
         if (user == null)
-        {
-            return NotFound(new { message = "User with this email does not exist." });
-        }
+            return BadRequest(new { message = "User not found" });
 
-        var token = await _tokenService.GeneratePasswordResetToken(user.Email);
-        var url = Url.Action("ResetPassword", "Users", new { email = user.Email, token }, Request.Scheme);
-        Console.WriteLine("---url " + url);
-        bool result = _emailHelper.SendEmailResetPassword(user.Email, url);
-        if (!result)
-        {
-            return StatusCode(500, new { message = "Error occurred while sending email." });
-        }
-
-        return Ok(new { message = "Password reset link sent to email." });
+        var playlist = await _userService.CreatePlaylist(user.Id, name, description);
+        return Ok(playlist);
     }
 
-    [HttpGet("forgot-password")]
-    [AllowAnonymous]
-    public IActionResult ForgotPassword()
+    [HttpGet("{userId}/playlists")]
+    public async Task<IActionResult> GetPlaylists(int userId)
     {
-        Console.WriteLine("Controller HttpGet(\"forgot-password\")");
-        return Ok(new { message = "Enter your email to reset the password." });
+        var playlists = await _userService.GetPlaylists(userId);
+        if (playlists == null || !playlists.Any())
+            return NotFound(new { message = "No playlists found for the user" });
+
+        return Ok(playlists);
     }
 
-    [HttpGet("forgot-password-confirmation")]
-    [AllowAnonymous]
-    public IActionResult ForgotPasswordConfirmation()
+    // Метод для додавання треку до плейлиста
+    [HttpPost("{playlistId}/tracks/{trackId}")]
+    public async Task<IActionResult> AddTrackToPlaylist(int playlistId, int trackId)
     {
-        return Ok(new { message = "Password reset confirmation page" });
+        try
+        {
+            await _userService.AddTrackToPlaylist(playlistId, trackId);
+            return Ok(new { message = "Track successfully added to the playlist" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
-    [HttpPost("reset-password")]
-    [AllowAnonymous]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
+    // Метод для видалення треку з плейлиста
+    [HttpDelete("{playlistId}/tracks/{trackId}")]
+    public async Task<IActionResult> RemoveTrackFromPlaylist(int playlistId, int trackId)
     {
-        if (!ModelState.IsValid)
+        try
         {
-            return BadRequest(ModelState);
+            await _userService.RemoveTrackFromPlaylist(playlistId, trackId);
+            return Ok(new { message = "Track successfully removed from the playlist" });
         }
-
-        // Получите пользователя по email
-        var user = await _userService.GetByEmail(model.Email);
-        if (user == null)
+        catch (Exception ex)
         {
-            return NotFound(new { message = "User with this email does not exist." });
+            return BadRequest(new { message = ex.Message });
         }
-        
-        // Проверьте токен (возможно, с помощью вашего TokenService)
-        var isValidToken = await _tokenService.VerifyPasswordResetToken(model.Email, model.Token);
-        if (!isValidToken)
-        {
-            return BadRequest(new { message = "Invalid or expired token." });
-        }
-
-        // Измените пароль
-        var isResetSuccessful = await _userService.ResetPasswordAsync(model.Email, model.Token, model.ConfirmPassword);
-        if (!isResetSuccessful)
-        {
-            return StatusCode(500, new { message = "Error occurred while resetting password." });
-        }
-
-        return Ok(new { message = "Password has been successfully reset." });
     }
 
-    [HttpGet("reset-password")]
-    [AllowAnonymous]
-    public IActionResult ResetPassword(string email, string token)
+    [HttpGet("{userId}/followers-count")]
+    public async Task<IActionResult> GetFollowersCount(int userId)
     {
-        // Можно добавить проверку токена, если это необходимо
-
-        // Вместо возвращения представления, просто возвращаем JSON
-        return Ok(new { Email = email, Token = token });
+        var count = await _userStatisticsService.GetFollowersCount(userId);
+        return Ok(new { FollowersCount = count });
     }
 
-    // Admin-доступ, щоб видалити користувача за id
-    //[Admin]
-    //[HttpDelete("{id}")]
-    //public async Task<IActionResult> Delete(int id)
-    //{
-    //    await _userService.Delete(id);
-    //    return Ok();
-    //}
+    [HttpGet("{userId}/listenings-count")]
+    public async Task<IActionResult> GetListeningsCount(int userId)
+    {
+        var count = await _userStatisticsService.GetListeningsCount(userId);
+        return Ok(new { ListeningsCount = count });
+    }
+
+    [HttpGet("{userId}/likes-count")]
+    public async Task<IActionResult> GetLikesCount(int userId)
+    {
+        var count = await _userStatisticsService.GetLikesCount(userId);
+        return Ok(new { LikesCount = count });
+    }
+
+    [HttpGet("{userId}/comments-count")]
+    public async Task<IActionResult> GetCommentsCount(int userId)
+    {
+        var count = await _userStatisticsService.GetCommentsCount(userId);
+        return Ok(new { CommentsCount = count });
+    }
 }

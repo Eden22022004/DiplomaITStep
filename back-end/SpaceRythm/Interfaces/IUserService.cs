@@ -33,10 +33,14 @@ public interface IUserService
     Task <bool> Delete(int id);
     //Task<bool> VerifyFacebookRequest(string accessToken);
     Task<string> VerifyFacebookRequest(string accessToken);
-    //Task<string> GeneratePasswordResetToken(string email); 
-    //Task<string> GenerateEmailConfirmationToken(string email);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
     Task<bool> ResetPassword(ResetPasswordRequest request);
     Task<bool> ResetPasswordAsync(string email, string token, string newPassword);
+    Task<Playlist> CreatePlaylist(int userId, string name, string description);
+    Task<Playlist> CreatePlaylist(int userId, string name, string description, List<int> trackIds);
+    Task<IEnumerable<Playlist>> GetPlaylists(int userId);
+    Task AddTrackToPlaylist(int playlistId, int trackId);
+    Task RemoveTrackFromPlaylist(int playlistId, int trackId);
+
 }
 
