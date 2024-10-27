@@ -51,12 +51,12 @@ namespace SpaceRythm.Services
 
         public async Task<User> GetByUsername(string username)
         {
-            return await _context.Users.SingleOrDefaultAsync(u => u.Username == username);
+            return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
         }
 
         public async Task<User> GetByEmail(string email)
         {
-            return await _context.Users.SingleOrDefaultAsync(u => u.Email == email);
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
 
 
@@ -393,6 +393,97 @@ namespace SpaceRythm.Services
             await _context.SaveChangesAsync();
 
             return true;
+        }
+
+        public async Task<Playlist> CreatePlaylist(int userId, string name, string description)
+        {
+            // Створюємо новий плейлист з необхідними властивостями
+            var playlist = new Playlist
+            {
+                UserId = userId,
+                Title = name,
+                Description = description,
+                CreatedDate = DateTime.Now,
+                IsPublic = true,
+                PlaylistTracks = new List<PlaylistTracks>()
+            };
+
+            // Додаємо плейлист до контексту бази даних
+            _context.Playlists.Add(playlist);
+            await _context.SaveChangesAsync();
+
+            return playlist;
+        }
+
+        public async Task<Playlist> CreatePlaylist(int userId, string name, string description, List<int> trackIds)
+        {
+            var playlist = new Playlist
+            {
+                UserId = userId,
+                Title = name,
+                Description = description,
+                CreatedDate = DateTime.Now,
+                IsPublic = true,
+                PlaylistTracks = trackIds.Select(trackId => new PlaylistTracks
+                {
+                    TrackId = trackId,
+                    AddedDate = DateTime.Now
+                }).ToList()
+            };
+
+            _context.Playlists.Add(playlist);
+            await _context.SaveChangesAsync();
+
+            return playlist;
+        }
+
+        public async Task<IEnumerable<Playlist>> GetPlaylists(int userId)
+        {
+            return await _context.Playlists
+                .Where(p => p.UserId == userId)
+                .Include(p => p.PlaylistTracks) // Включаємо пов’язані треки, якщо потрібно
+                .ToListAsync();
+        }
+
+        public async Task AddTrackToPlaylist(int playlistId, int trackId)
+        {
+            // Перевіряємо, чи існує плейлист
+            var playlist = await _context.Playlists
+                .Include(p => p.PlaylistTracks)
+                .FirstOrDefaultAsync(p => p.PlaylistId == playlistId);
+
+            if (playlist == null)
+                throw new Exception("Playlist not found");
+
+            // Перевіряємо, чи трек вже додано до плейлисту
+            var trackExists = playlist.PlaylistTracks.Any(pt => pt.TrackId == trackId);
+            if (trackExists)
+                throw new Exception("Track already exists in the playlist");
+
+            // Додаємо трек до плейлиста
+            var playlistTrack = new PlaylistTracks
+            {
+                PlaylistId = playlistId,
+                TrackId = trackId,
+                AddedDate = DateTime.Now
+            };
+
+            playlist.PlaylistTracks.Add(playlistTrack);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task RemoveTrackFromPlaylist(int playlistId, int trackId)
+        {
+            // Знаходимо запис плейлиста і треку
+            var playlistTrack = await _context.PlaylistTracks
+                .FirstOrDefaultAsync(pt => pt.PlaylistId == playlistId && pt.TrackId == trackId);
+
+            if (playlistTrack == null)
+                throw new Exception("Track not found in the playlist");
+
+            // Видаляємо трек з плейлиста
+            _context.PlaylistTracks.Remove(playlistTrack);
+            await _context.SaveChangesAsync();
         }
     }
 
