@@ -21,7 +21,7 @@ public class MyDbContext : DbContext
 
     public DbSet<PlaylistTracks> PlaylistTracks { get; set; }
     public DbSet<TrackMetadata> TrackMetadatas { get; set; }
-
+    public DbSet<Listening> Listenings { get; set; }
     public DbSet<Comment> Comments { get; set; }
     public DbSet<Follower> Followers { get; set; }
     public DbSet<Like> Likes { get; set; }

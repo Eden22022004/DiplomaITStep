@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Identity;
 using SpaceRythm.Entities;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using SpaceRythm.Pages;
 
 
 
@@ -163,9 +164,12 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         options.RequiredLength = 10;
     });
 
+    services.AddHttpClient<TestUsersModel>();
+
     services.AddScoped<IUserService, UserService>();
     services.AddScoped<TokenService>();
     services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+    services.AddScoped<IUserStatisticsService, UserStatisticsService>();
 
     services.AddControllers();
     services.AddRazorPages();
