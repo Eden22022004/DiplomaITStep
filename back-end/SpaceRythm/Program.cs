@@ -141,6 +141,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     })
     .AddJwtBearer(options =>
     {
+    // Use jwtSettings properties directly
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -198,6 +199,7 @@ void ConfigureMiddleware(WebApplication app)
     app.UseAuthentication();
     app.UseAuthorization();
 
+// Ensure that Razor Pages are mapped
     app.MapRazorPages();
     app.MapControllers();
 }

@@ -11,6 +11,7 @@ using SpaceRythm.Services;
 
 namespace SpaceRythm.Controllers;
 
+
 [ApiController]
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
@@ -34,6 +35,7 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по id
+    //[HttpGet("/api/users/{id}")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(int id)
     {
@@ -44,6 +46,7 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
+    //[HttpGet("/api/users/by-username/{username}")]
     [HttpGet("by-username/{username}")]
     public async Task<IActionResult> GetByUsername(string username)
     {
@@ -55,6 +58,7 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
+    //[HttpGet("/api/users/by-email/{email}")]
     [HttpGet("by-email/{email}")]
     public async Task<IActionResult> GetByEmail(string email)
     {
@@ -68,6 +72,7 @@ public class UsersController : ControllerBase
     }
 
     // Завантаження профілю зображення
+    //[HttpPost("/api/user/upload-avatar")]
     [HttpPost("upload-avatar")]
     public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
     {
@@ -103,6 +108,7 @@ public class UsersController : ControllerBase
     }
 
     // Перевірка, чи поточний user is an admin
+    //[HttpPost("/api/user/isAdmin")]
     [HttpPost("isAdmin")]
     public IActionResult IsAdmin()
     {
@@ -115,6 +121,8 @@ public class UsersController : ControllerBase
     }
 
     // Update інформації користувача тільки authorized може)
+    //[SpaceRythm.Attributes.Authorize]
+    //[HttpPut("/api/user")]
     [SpaceRythm.Attributes.Authorize]
     [HttpPut]
     public async Task<IActionResult> Update(UpdateUserRequest req)
@@ -129,6 +137,7 @@ public class UsersController : ControllerBase
     }
 
     // Підписка до іншого користувача для отримання оновлень від нього
+    //[HttpPost("/api/users/{id}/follow")]
     [HttpPost("{id}/follow")]
     public async Task<IActionResult> FollowUser(int id)
     {
@@ -141,6 +150,7 @@ public class UsersController : ControllerBase
     }
 
     // Список підписників користувача
+    //[HttpGet("/api/users/{id}/followers")]
     [HttpGet("{id}/followers")]
     public async Task<IActionResult> GetFollowers(int id)
     {
@@ -149,6 +159,7 @@ public class UsersController : ControllerBase
     }
 
     // Зміна пароля користувача
+    //[HttpPost("/api/user/change-password")]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
     {
@@ -161,6 +172,8 @@ public class UsersController : ControllerBase
     }
 
     // Delete поточного користувача
+    //[SpaceRythm.Attributes.Authorize]
+    //[HttpDelete("/api/user")]
     [SpaceRythm.Attributes.Authorize]
     [HttpDelete]
     public async Task<IActionResult> Delete()

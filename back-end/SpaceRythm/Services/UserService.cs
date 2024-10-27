@@ -237,10 +237,12 @@ namespace SpaceRythm.Services
 
         public async Task<UpdateUserResponse> Update(string id, UpdateUserRequest req)
         {
+            // Step 1: Find user by ID
             var user = await _context.Users.FindAsync(id);
 
             if (user == null)
             {
+                // Throw an error if the user is not found
                 throw new Exception("User not found");
             }
             user.Email = req.Email ?? user.Email; 
@@ -248,6 +250,7 @@ namespace SpaceRythm.Services
             user.ProfileImage = req.ProfileImage ?? user.ProfileImage;
             user.Biography = req.Biography ?? user.Biography;
 
+            // You might want to hash the new password if it’s updated
             if (!string.IsNullOrEmpty(req.Password))
             {
                 user.Password = PasswordHash.Hash(req.Password);
@@ -256,6 +259,7 @@ namespace SpaceRythm.Services
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
+            // Step 4: Return the updated user information
             return new UpdateUserResponse
             {
                
@@ -303,6 +307,7 @@ namespace SpaceRythm.Services
         // 3. Get Followers
         public async Task<IEnumerable<FollowerDto>> GetFollowers(int followedUserId)
         {
+            // Отримуємо всіх підписників для конкретного користувача і додаткову інформацію про них
             var followers = await _context.Followers
                 .Where(f => f.FollowedUserId == followedUserId)
                 .Select(f => new FollowerDto
@@ -323,6 +328,7 @@ namespace SpaceRythm.Services
             var user = await _context.Users.FindAsync(userId);
             if (user == null) throw new KeyNotFoundException("User not found");
 
+            // Assuming you have a method to validate the old password and hash the new one
             if (!VerifyPassword(request.OldPassword, user.Password))
             {
                 throw new AppException("Old password is incorrect");
@@ -334,6 +340,7 @@ namespace SpaceRythm.Services
 
         private bool VerifyPassword(string inputPassword, string storedHash)
         {
+            // Logic for verifying password
             return BCrypt.Net.BCrypt.Verify(inputPassword, storedHash);
         }
 
