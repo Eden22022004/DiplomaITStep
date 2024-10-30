@@ -26,15 +26,17 @@ namespace SpaceRythm.Services
     {
         private readonly MyDbContext _context;
         private readonly JwtSettings _jwtSettings;
-        private readonly HttpClient _httpClient;
+        //private readonly HttpClient _httpClient;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly TokenService _tokenService;
         private readonly IPasswordHasher<User> _passwordHasher;
 
-        public UserService(MyDbContext context, IOptions<JwtSettings> jwtOptions, HttpClient httpClient, TokenService tokenService, IPasswordHasher<User> passwordHasher)
+        public UserService(MyDbContext context, IOptions<JwtSettings> jwtOptions, HttpClient httpClient, TokenService tokenService, IPasswordHasher<User> passwordHasher, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _jwtSettings = jwtOptions.Value;
-            _httpClient = httpClient;
+            //_httpClient = httpClient;
+            _httpContextAccessor = httpContextAccessor;
             _tokenService = tokenService;
             _passwordHasher = passwordHasher;
         }
@@ -58,7 +60,6 @@ namespace SpaceRythm.Services
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
-
 
         public async Task<CreateUserResponse> Create(CreateUserRequest req)
         {
@@ -144,10 +145,11 @@ namespace SpaceRythm.Services
       
         public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest req)
         {
-            Console.WriteLine($"Attempting to authenticate user with username: {req.Username}");
-
+            Console.WriteLine($"Attempting to authenticate user with username: {req.Username}, password: {req.Password}");
+            
             // Step 1: Find user by username
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == req.Username);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == req.Username);
+            Console.WriteLine($"_context username: {user.Username}, password: {user.Password}");
             if (user == null)
             {
                 Console.WriteLine($"User with username {req.Username} not found.");
@@ -162,16 +164,20 @@ namespace SpaceRythm.Services
             }
 
             // Step 3: Verify password
-            if (!PasswordHash.Verify(req.Password, user.Password))
+            var passwordVerificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, req.Password);
+
+            if (passwordVerificationResult != PasswordVerificationResult.Success)
             {
                 Console.WriteLine($"Invalid password for user {req.Username}.");
                 throw new Exception("Username or password incorrect");
             }
+            _httpContextAccessor.HttpContext.Items["User"] = user;
 
             // Step 4: Generate JWT token after successful verification
             Console.WriteLine($"Password verification succeeded for user {req.Username}. Generating JWT token...");
             string token = _tokenService.GenerateToken(_jwtSettings, user);
             Console.WriteLine($"JWT token generated successfully for user {req.Username}.");
+            Console.WriteLine($"JWT token  {token}.");
 
             // Step 5: Return the authentication response
             return new AuthenticateResponse(user, token);
@@ -234,19 +240,24 @@ namespace SpaceRythm.Services
             return true;
         }
 
-
         public async Task<UpdateUserResponse> Update(string id, UpdateUserRequest req)
         {
-            // Step 1: Find user by ID
-            var user = await _context.Users.FindAsync(id);
+            // Спробуйте конвертувати id у int
+            if (!int.TryParse(id, out int userId))
+            {
+                throw new Exception("Invalid user ID");
+            }
 
+            var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
                 // Throw an error if the user is not found
                 throw new Exception("User not found");
             }
-            user.Email = req.Email ?? user.Email; 
-            user.Username = req.Username ?? user.Username; 
+
+            // Оновлення властивостей користувача
+            user.Email = req.Email ?? user.Email;
+            user.Username = req.Username ?? user.Username;
             user.ProfileImage = req.ProfileImage ?? user.ProfileImage;
             user.Biography = req.Biography ?? user.Biography;
 
@@ -262,7 +273,7 @@ namespace SpaceRythm.Services
             // Step 4: Return the updated user information
             return new UpdateUserResponse
             {
-               
+                // Повернення оновленого користувача або іншої інформації
             };
         }
 
@@ -277,50 +288,12 @@ namespace SpaceRythm.Services
             return user.ProfileImage; 
         }
 
-        // 2. Follow User
-        public async Task FollowUser(int followerId, int followedUserId)
+        public async Task<string> GetUserAvatarNameAsync(int userId)
         {
-            var follower = await _context.Users.FindAsync(followerId);
-            var followedUser = await _context.Users.FindAsync(followedUserId);
-
-            if (follower == null || followedUser == null)
-                throw new KeyNotFoundException("User not found");
-
-
-            var alreadyFollowing = await _context.Followers
-                .AnyAsync(f => f.UserId == followerId && f.FollowedUserId == followedUserId);
-
-            if (!alreadyFollowing)
-            {
-                var follow = new Follower
-                {
-                    UserId = followerId,
-                    FollowedUserId = followedUserId,
-                    FollowDate = DateTime.UtcNow 
-                };
-
-                _context.Followers.Add(follow);
-                await _context.SaveChangesAsync();
-            }
+            var user = await _context.Users.FindAsync(userId);
+            return user?.ProfileImage;
         }
 
-        // 3. Get Followers
-        public async Task<IEnumerable<FollowerDto>> GetFollowers(int followedUserId)
-        {
-            // Отримуємо всіх підписників для конкретного користувача і додаткову інформацію про них
-            var followers = await _context.Followers
-                .Where(f => f.FollowedUserId == followedUserId)
-                .Select(f => new FollowerDto
-                {
-                    Id = f.UserId,       
-                    Username = f.User.Username,   
-                    Avatar = f.User.ProfileImage,  
-                    FollowDate = f.FollowDate       
-                })
-                .ToListAsync();
-
-            return followers;
-        }
 
         // 4. Change Password
         public async Task ChangePassword(int userId, ChangePasswordRequest request)
@@ -367,12 +340,12 @@ namespace SpaceRythm.Services
 
             try
             {
-                var response = await _httpClient.GetAsync(url);
-                if (response.IsSuccessStatusCode)
-                {
-                    var userData = await response.Content.ReadFromJsonAsync<FacebookUser>();
-                    return userData.Id; 
-                }
+                //var response = await _httpClient.GetAsync(url);
+                //if (response.IsSuccessStatusCode)
+                //{
+                //    var userData = await response.Content.ReadFromJsonAsync<FacebookUser>();
+                //    return userData.Id; 
+                //}
             }
             catch (HttpRequestException e)
             {
@@ -402,6 +375,49 @@ namespace SpaceRythm.Services
             return true;
         }
 
+        // 2. Follow User
+        public async Task FollowUser(int followerId, int followedUserId)
+        {
+            var follower = await _context.Users.FindAsync(followerId);
+            var followedUser = await _context.Users.FindAsync(followedUserId);
+
+            if (follower == null || followedUser == null)
+                throw new KeyNotFoundException("User not found");
+
+
+            var alreadyFollowing = await _context.Followers
+                .AnyAsync(f => f.UserId == followerId && f.FollowedUserId == followedUserId);
+
+            if (!alreadyFollowing)
+            {
+                var follow = new Follower
+                {
+                    UserId = followerId,
+                    FollowedUserId = followedUserId,
+                    FollowDate = DateTime.UtcNow
+                };
+
+                _context.Followers.Add(follow);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        // 3. Get Followers
+        public async Task<IEnumerable<FollowerDto>> GetFollowers(int followedUserId)
+        {
+            var followers = await _context.Followers
+                .Where(f => f.FollowedUserId == followedUserId)
+                .Select(f => new FollowerDto
+                {
+                    Id = f.UserId,
+                    Username = f.User.Username,
+                    Avatar = f.User.ProfileImage,
+                    FollowDate = f.FollowDate
+                })
+                .ToListAsync();
+
+            return followers;
+        }
         public async Task<Playlist> CreatePlaylist(int userId, string name, string description)
         {
             // Створюємо новий плейлист з необхідними властивостями

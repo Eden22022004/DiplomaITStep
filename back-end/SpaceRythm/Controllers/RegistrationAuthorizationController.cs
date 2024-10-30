@@ -65,7 +65,7 @@ public class RegistrationAuthorizationController : ControllerBase
 
                 // Логіка для генерації токену підтвердження електронної пошти
                 string emailConfirmationToken = await _tokenService.GenerateEmailConfirmationToken(res.Email);
-                string confirmationLink = Url.Action("ConfirmEmail", "Users", new { token = emailConfirmationToken, email = res.Email }, Request.Scheme);
+                string confirmationLink = Url.Action("ConfirmEmail", "RegistrationAuthorization", new { token = emailConfirmationToken, email = res.Email }, Request.Scheme);
                 Console.WriteLine($"Controller Create confirmationLink: {confirmationLink}");
 
                 // Відправка листа з посиланням на підтвердження
@@ -113,6 +113,7 @@ public class RegistrationAuthorizationController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Authenticate(AuthenticateRequest req)
     {
+        Console.WriteLine($"RegistrationAuthorizationController Authenticate");
         try
         {
             // Call the Authenticate method in the service
@@ -134,7 +135,7 @@ public class RegistrationAuthorizationController : ControllerBase
             // Handle the error for email not confirmed or other issues
             if (ex.Message.Contains("Email not confirmed"))
             {
-                ModelState.AddModelError(nameof(req.Email), "Email not confirmed. Please check your inbox and confirm your email.");
+                //ModelState.AddModelError(nameof(req.Email), "Email not confirmed. Please check your inbox and confirm your email.");
                 return BadRequest(new { message = ex.Message });
             }
 
@@ -262,7 +263,7 @@ public class RegistrationAuthorizationController : ControllerBase
         }
 
         var token = await _tokenService.GeneratePasswordResetToken(user.Email);
-        var url = Url.Action("ResetPassword", "Users", new { email = user.Email, token }, Request.Scheme);
+        var url = Url.Action("ResetPassword", "RegistrationAuthorization", new { email = user.Email, token }, Request.Scheme);
         Console.WriteLine("---url " + url);
         bool result = _emailHelper.SendEmailResetPassword(user.Email, url);
         if (!result)

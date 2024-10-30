@@ -2,11 +2,13 @@
 using Microsoft.EntityFrameworkCore;
 using SpaceRythm.Entities;
 using SpaceRythm.Data;
-using SpaceRythm.Attributes;
+//using SpaceRythm.Attributes;
 using SpaceRythm.Interfaces;
 using SpaceRythm.Models;
 using SpaceRythm.Models.User;
 using SpaceRythm.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace SpaceRythm.Controllers;
@@ -16,13 +18,17 @@ namespace SpaceRythm.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
+    private readonly ILogger<UsersController> _logger;
     private readonly IUserService _userService;
+    private readonly MyDbContext _context;
     private readonly IUserStatisticsService _userStatisticsService;
 
-    public UsersController(IUserService userService, IUserStatisticsService userStatisticsService)
+    public UsersController(IUserService userService, IUserStatisticsService userStatisticsService, MyDbContext context, ILogger<UsersController> logger)
     {
         _userService = userService;
         _userStatisticsService = userStatisticsService;
+        _context=context;
+        _logger = logger;
     }
 
     // Get users
@@ -57,8 +63,7 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
-    // Отримати конкретного user по username
-    //[HttpGet("/api/users/by-email/{email}")]
+    // Отримати конкретного user по email
     [HttpGet("by-email/{email}")]
     public async Task<IActionResult> GetByEmail(string email)
     {
@@ -71,44 +76,89 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
+    // Отримати avatar
+    [HttpGet("avatar")]
+    public async Task<IActionResult> GetUserAvatar()
+    {
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
+        {
+            return Unauthorized("User ID not found or invalid.");
+        }
+
+        var avatarFileName = await _userService.GetUserAvatarNameAsync(userId);
+        if (string.IsNullOrEmpty(avatarFileName))
+        {
+            return NotFound("Avatar not found.");
+        }
+
+        // Формуємо повний шлях до файлу
+        var avatarPath = Path.Combine("wwwroot", "avatars", avatarFileName);
+
+        if (!System.IO.File.Exists(avatarPath))
+        {
+            return NotFound("Avatar file not found on server.");
+        }
+
+        var avatarBytes = await System.IO.File.ReadAllBytesAsync(avatarPath);
+        return File(avatarBytes, "image/jpeg"); 
+    }
+
     // Завантаження профілю зображення
-    //[HttpPost("/api/user/upload-avatar")]
+
+    [Authorize]
     [HttpPost("upload-avatar")]
     public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
     {
-        var user = HttpContext.Items["User"] as User;
+        _logger.LogInformation("Початок методу UploadAvatar");
+       
+        if (User.Identity.IsAuthenticated)
+        {
+            var claims = User.Claims.ToList();
+            foreach (var claim in claims)
+            {
+                _logger.LogInformation($"Claim Type: {claim.Type}, Claim Value: {claim.Value}");
+            }
+        }
+        else
+        {
+            _logger.LogWarning("User is not authenticated.");
+        }
+
+        if (!int.TryParse(User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value, out int userId))
+        {
+            return Unauthorized(new { message = "User not authorized" });
+        }
+
+        var user = await _context.Users.FindAsync(userId);
         if (user == null)
             return BadRequest(new { message = "User not found" });
 
-        // Проверка на наличие файла
         if (avatar == null || avatar.Length == 0)
             return BadRequest(new { message = "Invalid avatar file" });
 
-        // Путь для сохранения аватара
         var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "avatars");
 
-        // Создаем папку, если ее нет
         if (!Directory.Exists(uploadsFolder))
             Directory.CreateDirectory(uploadsFolder);
 
-        // Генерируем уникальное имя для файла
         var uniqueFileName = $"{Guid.NewGuid()}_{avatar.FileName}";
         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-        // Сохраняем файл на сервере
         using (var stream = new FileStream(filePath, FileMode.Create))
         {
             await avatar.CopyToAsync(stream);
         }
 
-        // Обновляем аватар пользователя в базе данных
         var avatarPath = await _userService.UploadAvatar(user.Id, uniqueFileName);
 
         return Ok(new { avatarPath });
     }
 
     // Перевірка, чи поточний user is an admin
-    //[HttpPost("/api/user/isAdmin")]
+
+    [Authorize]
     [HttpPost("isAdmin")]
     public IActionResult IsAdmin()
     {
@@ -120,11 +170,9 @@ public class UsersController : ControllerBase
         return Ok(user.IsAdmin);
     }
 
-    // Update інформації користувача тільки authorized може)
-    //[SpaceRythm.Attributes.Authorize]
-    //[HttpPut("/api/user")]
-    [SpaceRythm.Attributes.Authorize]
-    [HttpPut]
+    // Update інформації користувача
+    [Authorize]
+    [HttpPut("update")]
     public async Task<IActionResult> Update(UpdateUserRequest req)
     {
         var user = HttpContext.Items["User"] as User;
@@ -136,30 +184,8 @@ public class UsersController : ControllerBase
         return Ok(res);
     }
 
-    // Підписка до іншого користувача для отримання оновлень від нього
-    //[HttpPost("/api/users/{id}/follow")]
-    [HttpPost("{id}/follow")]
-    public async Task<IActionResult> FollowUser(int id)
-    {
-        var user = HttpContext.Items["User"] as User;
-        if (user == null)
-            return BadRequest(new { message = "User not found" });
 
-        await _userService.FollowUser(user.Id, id);
-        return Ok(new { message = "Successfully followed the user." });
-    }
-
-    // Список підписників користувача
-    //[HttpGet("/api/users/{id}/followers")]
-    [HttpGet("{id}/followers")]
-    public async Task<IActionResult> GetFollowers(int id)
-    {
-        var followers = await _userService.GetFollowers(id);
-        return Ok(followers);
-    }
-
-    // Зміна пароля користувача
-    //[HttpPost("/api/user/change-password")]
+    [Authorize]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
     {
@@ -172,9 +198,7 @@ public class UsersController : ControllerBase
     }
 
     // Delete поточного користувача
-    //[SpaceRythm.Attributes.Authorize]
-    //[HttpDelete("/api/user")]
-    [SpaceRythm.Attributes.Authorize]
+    [Authorize]
     [HttpDelete]
     public async Task<IActionResult> Delete()
     {
@@ -187,6 +211,7 @@ public class UsersController : ControllerBase
         return Ok();
     }
 
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -197,7 +222,30 @@ public class UsersController : ControllerBase
         return Ok(new { message = "User deleted successfully" });
     }
 
+    // Підписка до іншого користувача для отримання оновлень від нього
+    [Authorize]
+    [HttpPost("{id}/follow")]
+    public async Task<IActionResult> FollowUser(int id)
+    {
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return BadRequest(new { message = "User not found" });
+
+        await _userService.FollowUser(user.Id, id);
+        return Ok(new { message = "Successfully followed the user." });
+    }
+
+    // Список підписників користувача
+    [Authorize]
+    [HttpGet("{id}/followers")]
+    public async Task<IActionResult> GetFollowers(int id)
+    {
+        var followers = await _userService.GetFollowers(id);
+        return Ok(followers);
+    }
+
     // Створення плейлисту
+    [Authorize]
     [HttpPost("create-playlist")]
     public async Task<IActionResult> CreatePlaylist(string name, string description)
     {
@@ -209,6 +257,7 @@ public class UsersController : ControllerBase
         return Ok(playlist);
     }
 
+    [Authorize]
     [HttpGet("{userId}/playlists")]
     public async Task<IActionResult> GetPlaylists(int userId)
     {
@@ -220,6 +269,7 @@ public class UsersController : ControllerBase
     }
 
     // Метод для додавання треку до плейлиста
+    [Authorize]
     [HttpPost("{playlistId}/tracks/{trackId}")]
     public async Task<IActionResult> AddTrackToPlaylist(int playlistId, int trackId)
     {
@@ -235,6 +285,7 @@ public class UsersController : ControllerBase
     }
 
     // Метод для видалення треку з плейлиста
+    [Authorize]
     [HttpDelete("{playlistId}/tracks/{trackId}")]
     public async Task<IActionResult> RemoveTrackFromPlaylist(int playlistId, int trackId)
     {
@@ -249,6 +300,7 @@ public class UsersController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpGet("{userId}/followers-count")]
     public async Task<IActionResult> GetFollowersCount(int userId)
     {
@@ -256,6 +308,7 @@ public class UsersController : ControllerBase
         return Ok(new { FollowersCount = count });
     }
 
+    [Authorize]
     [HttpGet("{userId}/listenings-count")]
     public async Task<IActionResult> GetListeningsCount(int userId)
     {
@@ -263,6 +316,7 @@ public class UsersController : ControllerBase
         return Ok(new { ListeningsCount = count });
     }
 
+    [Authorize]
     [HttpGet("{userId}/likes-count")]
     public async Task<IActionResult> GetLikesCount(int userId)
     {
@@ -270,6 +324,7 @@ public class UsersController : ControllerBase
         return Ok(new { LikesCount = count });
     }
 
+    [Authorize]
     [HttpGet("{userId}/comments-count")]
     public async Task<IActionResult> GetCommentsCount(int userId)
     {

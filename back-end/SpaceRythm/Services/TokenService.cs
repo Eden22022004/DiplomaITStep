@@ -21,6 +21,8 @@ public class TokenService
     }
     public string GenerateToken(JwtSettings jwtSettings, User user)
     {
+        Console.WriteLine($"Створення токена для користувача з ID: {user.Id}");
+
         // Перевірка наявності та коректності значень у JwtSettings
         if (string.IsNullOrWhiteSpace(jwtSettings.Key))
             throw new ArgumentException("Secret key is missing in JWT settings.");
@@ -42,8 +44,8 @@ public class TokenService
         {
             Subject = new ClaimsIdentity(new[]
             {
-                    new Claim("id", user.Id.ToString()), // Перетворення user.Id у рядок
-                    new Claim(ClaimTypes.Name, user.Username) // Username
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email)
                 }),
             Expires = DateTime.UtcNow.AddDays(jwtSettings.ExpiresInMinutes),
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
@@ -53,6 +55,13 @@ public class TokenService
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
+
+        // Виведення претензій
+        var claims = tokenDescriptor.Subject.Claims.ToList();
+        foreach (var claim in claims)
+        {
+            Console.WriteLine($"Claim Type: {claim.Type}, Claim Value: {claim.Value}");
+        }
 
         // Повернення згенерованого токена
         return tokenHandler.WriteToken(token);
@@ -101,7 +110,7 @@ public class TokenService
         {
             Subject = new ClaimsIdentity(new Claim[]
             {
-            new Claim(ClaimTypes.Name, user.Id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Email, user.Email)
             }),
             Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiresInMinutes), // Set your token expiration time
