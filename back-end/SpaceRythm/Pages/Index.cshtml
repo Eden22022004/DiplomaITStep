@@ -39,15 +39,27 @@
                     <input type="password" class="form-control" id="loginPassword" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Login</button>
+                <a href="/ForgotPassword">Reset password</a>
+                <!-- Google OAuth Button -->
+                <div class="mt-3">
+                    <h3>Or sign in with</h3>
+                    <a class="btn btn-danger" href="https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=YOUR_CLIENT_ID&redirect_uri=https://localhost:5017/users/google-response&scope=email profile">Sign in with Google</a>
+                </div>
             </form>
-            @* <a href="/forgot-password">Сбросить пароль</a> *@
-            <a href="/ForgotPassword">Reset password</a>
-            <!-- Google OAuth Button -->
-            <div class="mt-3">
-                <h3>Or sign in with</h3>
-                <a class="btn btn-danger" href="https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=529619917768-2jc98691imtp6bb38j0dhhnhp0eb09lh.apps.googleusercontent.com&redirect_uri=https://localhost:5017/users/google-response&scope=email profile">Sign in with Google</a>
-            </div>
         </div>
+    </div>
+
+    <!-- Avatar Upload Section -->
+    <div class="mt-5">
+        <h2>Upload Avatar</h2>
+        <form id="uploadAvatarForm">
+            <div class="mb-3">
+                <label for="avatarInput" class="form-label">Upload Avatar</label>
+                @* <input type="file" class="form-control" id="avatarInput" required> *@
+                <input type="file" id="avatarInput" accept="image/*" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
     </div>
 </div>
 
@@ -59,7 +71,7 @@
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
 
-            const response = await fetch('/api/users', {
+            const response = await fetch('/api/registrationAuthorization', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -77,23 +89,70 @@
 
         document.getElementById('loginForm').addEventListener('submit', async function (event) {
             event.preventDefault();
+
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
 
-            const response = await fetch('/api/users/authenticate', {
+            const response = await fetch('/api/registrationAuthorization/authenticate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ Username: username, Password: password })
             });
 
             if (response.ok) {
                 const data = await response.json();
+                console.log('Response data:', data); // Виводимо всю відповідь
+                localStorage.setItem('jwtToken', data.jwtToken);
+                console.log('JWT Token send:', data.jwtToken);
                 alert('Login successful: ' + data.username);
-                // Optionally store the token in local storage or cookies
+
+                // Show the avatar upload form
+                document.getElementById('uploadAvatarForm').style.display = 'block';
             } else {
                 alert('Login failed');
+                const errorData = await response.json();
+                alert('Login failed: ' + (errorData.message || 'Unknown error occurred'));
+            }
+        });
+
+        document.getElementById('uploadAvatarForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const avatarInput = document.getElementById('avatarInput');
+
+            // Перевіряємо, чи вибрано файл
+            if (!avatarInput || !avatarInput.files.length) {
+                alert('Please select a file to upload.');
+                return;
+            }
+
+            // Оголошуємо formData один раз
+            const formData = new FormData();
+            formData.append('avatar', avatarInput.files[0]);
+
+            // Отримуємо токен з localStorage
+            const token = localStorage.getItem('jwtToken');
+            console.log('JWT Token receive:', token);
+
+            // Надсилаємо запит на сервер
+            const response = await fetch('/api/users/upload-avatar', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    // При використанні FormData не потрібно вказувати 'Content-Type'
+                },
+                body: formData
+            });
+
+            // Обробка відповіді сервера
+            if (response.ok) {
+                alert('Avatar uploaded successfully!');
+            } else {
+                alert('Failed to upload avatar');
+                const errorData = await response.json();
+                alert('Upload failed: ' + (errorData.message || 'Unknown error occurred'));
             }
         });
     </script>

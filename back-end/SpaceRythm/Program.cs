@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Identity;
 using SpaceRythm.Entities;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using SpaceRythm.Pages;
+using SpaceRythm.Models.Middlewares;
+using System.Security.Claims;
 
 
 
@@ -39,7 +41,6 @@ app.Use(async (context, next) =>
     Console.WriteLine($"Session ended at {sessionEndTime} UTC");
 });
 
-// Configure the HTTP request pipeline
 ConfigureMiddleware(app);
 
 app.Run();
@@ -62,17 +63,36 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         options.Cookie.HttpOnly = true;
     });
 
-    services.AddHttpClient();
+    //services.AddHttpClient();
 
     var emailOptions = builder.Configuration.GetSection("EmailSender").Get<EmailHelperOptions>() ?? throw new InvalidOperationException("Email Sender options not found.");
 
     var requireEmailConfirmed = configuration.GetValue<bool>("RequireConfirmedEmail");
 
+
     // Налаштування автентифікації (JWT і Cookies)
     services.AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+
+            // Додаємо NameClaimType для розпізнавання "nameid" як "ClaimTypes.NameIdentifier"
+            NameClaimType = ClaimTypes.NameIdentifier
+        };
     })
     .AddCookie()
     .AddGoogle("Google", options =>
@@ -138,20 +158,23 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
                 return Task.CompletedTask;
             }
         };
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
-        };
     });
+    
+    //.AddJwtBearer(options =>
+    //{
+    //    options.TokenValidationParameters = new TokenValidationParameters
+    //    {
+    //        ValidateIssuer = true,
+    //        ValidateAudience = true,
+    //        ValidateLifetime = true,
+    //        ValidateIssuerSigningKey = true,
+    //        ValidIssuer = jwtSettings.Issuer,
+    //        ValidAudience = jwtSettings.Audience,
+    //        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
+    //    };
+    //});
+
+    services.AddAuthorization();
 
     services.AddEmailHelper(emailOptions);
 
@@ -164,7 +187,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     });
 
     services.AddHttpClient<TestUsersModel>();
-
+    services.AddHttpContextAccessor();
     services.AddScoped<IUserService, UserService>();
     services.AddScoped<TokenService>();
     services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -182,10 +205,19 @@ void ConfigureMiddleware(WebApplication app)
         app.UseExceptionHandler("/Error");
         app.UseHsts();
     }
+    //app.UseMiddleware<UserMiddleware>();
+   
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();
     app.UseRouting();
+
+    app.Use(async (context, next) =>
+    {
+        Console.WriteLine($"Program.cs Incoming Request: {context.Request.Method} {context.Request.Path}");
+        await next.Invoke(); // Call the next middleware
+        Console.WriteLine($"Program.cs Response Status Code: {context.Response.StatusCode}");
+    });
 
     app.UseSession();
 
@@ -196,7 +228,26 @@ void ConfigureMiddleware(WebApplication app)
     });
 
     app.UseAuthentication();
+
+    // Middleware для логування claims аутентифікованого користувача
+    app.Use(async (context, next) =>
+    {
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            foreach (var claim in context.User.Claims)
+            {
+                Console.WriteLine($"Pr.cs Claim Type: {claim.Type}, Claim Value: {claim.Value}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Pr.cs User is not authenticated.");
+        }
+        await next.Invoke();
+    });
+
     app.UseAuthorization();
+    app.UseMiddleware<JwtMiddleware>();
 
     app.MapRazorPages();
     app.MapControllers();

@@ -26,6 +26,7 @@ public interface IUserService
     Task<UpdateUserResponse> Update(string id, UpdateUserRequest req);
 
     Task<string> UploadAvatar(int userId, string avatarPath);
+    Task<string?> GetUserAvatarNameAsync(int userId);
     Task FollowUser(int followerId, int followeeId);
     Task<IEnumerable<FollowerDto>> GetFollowers(int userId);
     Task ChangePassword(int userId, ChangePasswordRequest request);
