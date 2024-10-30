@@ -41,6 +41,7 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по id
+    //[HttpGet("/api/users/{id}")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(int id)
     {
@@ -51,6 +52,7 @@ public class UsersController : ControllerBase
     }
 
     // Отримати конкретного user по username
+    //[HttpGet("/api/users/by-username/{username}")]
     [HttpGet("by-username/{username}")]
     public async Task<IActionResult> GetByUsername(string username)
     {
@@ -104,6 +106,7 @@ public class UsersController : ControllerBase
     }
 
     // Завантаження профілю зображення
+
     [Authorize]
     [HttpPost("upload-avatar")]
     public async Task<IActionResult> UploadAvatar([FromForm] IFormFile avatar)
@@ -154,6 +157,7 @@ public class UsersController : ControllerBase
     }
 
     // Перевірка, чи поточний user is an admin
+
     [Authorize]
     [HttpPost("isAdmin")]
     public IActionResult IsAdmin()
@@ -180,7 +184,7 @@ public class UsersController : ControllerBase
         return Ok(res);
     }
 
-    // Зміна пароля користувача
+
     [Authorize]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)

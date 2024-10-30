@@ -70,7 +70,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     var requireEmailConfirmed = configuration.GetValue<bool>("RequireConfirmedEmail");
 
 
-    // Налаштування автентифікації (JWT і Cookies)
+    // ГЌГ Г«Г ГёГІГіГўГ Г­Г­Гї Г ГўГІГҐГ­ГІГЁГґВіГЄГ Г¶ВіВї (JWT Ві Cookies)
     services.AddAuthentication(options =>
     {
         options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -90,7 +90,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
 
-            // Додаємо NameClaimType для розпізнавання "nameid" як "ClaimTypes.NameIdentifier"
+            // Г„Г®Г¤Г ВєГ¬Г® NameClaimType Г¤Г«Гї Г°Г®Г§ГЇВіГ§Г­Г ГўГ Г­Г­Гї "nameid" ГїГЄ "ClaimTypes.NameIdentifier"
             NameClaimType = ClaimTypes.NameIdentifier
         };
     })
@@ -158,6 +158,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
                 return Task.CompletedTask;
             }
         };
+
     });
     
     //.AddJwtBearer(options =>
@@ -178,7 +179,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     services.AddEmailHelper(emailOptions);
 
-    // Налаштування політики паролів вручну
+    // ГЌГ Г«Г ГёГІГіГўГ Г­Г­Гї ГЇГ®Г«ВіГІГЁГЄГЁ ГЇГ Г°Г®Г«ВіГў ГўГ°ГіГ·Г­Гі
     services.Configure<PasswordOptions>(options =>
     {
         options.RequireDigit = true;
@@ -229,7 +230,7 @@ void ConfigureMiddleware(WebApplication app)
 
     app.UseAuthentication();
 
-    // Middleware для логування claims аутентифікованого користувача
+    // Middleware Г¤Г«Гї Г«Г®ГЈГіГўГ Г­Г­Гї claims Г ГіГІГҐГ­ГІГЁГґВіГЄГ®ГўГ Г­Г®ГЈГ® ГЄГ®Г°ГЁГ±ГІГіГўГ Г·Г 
     app.Use(async (context, next) =>
     {
         if (context.User.Identity?.IsAuthenticated == true)
@@ -249,6 +250,7 @@ void ConfigureMiddleware(WebApplication app)
     app.UseAuthorization();
     app.UseMiddleware<JwtMiddleware>();
 
+// Ensure that Razor Pages are mapped
     app.MapRazorPages();
     app.MapControllers();
 }
@@ -258,8 +260,8 @@ void ConfigureMiddleware(WebApplication app)
 
 //var builder = WebApplication.CreateBuilder(args);
 
-//builder.Logging.ClearProviders(); // Очищення провайдерів, щоб почати з нуля
-//builder.Logging.AddConsole(); // Додавання логування в консоль
+//builder.Logging.ClearProviders(); // ГЋГ·ГЁГ№ГҐГ­Г­Гї ГЇГ°Г®ГўГ Г©Г¤ГҐГ°ВіГў, Г№Г®ГЎ ГЇГ®Г·Г ГІГЁ Г§ Г­ГіГ«Гї
+//builder.Logging.AddConsole(); // Г„Г®Г¤Г ГўГ Г­Г­Гї Г«Г®ГЈГіГўГ Г­Г­Гї Гў ГЄГ®Г­Г±Г®Г«Гј
 
 //Console.WriteLine("UTC Time: " + DateTime.UtcNow);
 //Console.WriteLine("Local Time: " + DateTime.Now);
@@ -267,8 +269,8 @@ void ConfigureMiddleware(WebApplication app)
 
 //var loggerFactory = LoggerFactory.Create(builder =>
 //{
-//    builder.AddConsole(); // Додає логування в консоль
-//    builder.SetMinimumLevel(LogLevel.Debug); // Установлює мінімальний рівень логування
+//    builder.AddConsole(); // Г„Г®Г¤Г Вє Г«Г®ГЈГіГўГ Г­Г­Гї Гў ГЄГ®Г­Г±Г®Г«Гј
+//    builder.SetMinimumLevel(LogLevel.Debug); // Г“Г±ГІГ Г­Г®ГўГ«ГѕВє Г¬ВіГ­ВіГ¬Г Г«ГјГ­ГЁГ© Г°ВіГўГҐГ­Гј Г«Г®ГЈГіГўГ Г­Г­Гї
 //});
 //var logger = loggerFactory.CreateLogger<Program>();
 
@@ -293,16 +295,16 @@ void ConfigureMiddleware(WebApplication app)
 
 //app.Run();
 
-//// Метод для конфігурації сервісів
+//// ГЊГҐГІГ®Г¤ Г¤Г«Гї ГЄГ®Г­ГґВіГЈГіГ°Г Г¶ВіВї Г±ГҐГ°ГўВіГ±ВіГў
 //void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 //{
-//    // Завантаження налаштувань JWT
+//    // Г‡Г ГўГ Г­ГІГ Г¦ГҐГ­Г­Гї Г­Г Г«Г ГёГІГіГўГ Г­Гј JWT
 //    var jwtSettingsSection = configuration.GetSection("JwtSettings");
 //    var jwtSettings = jwtSettingsSection.Get<JwtSettings>();
 
 //    services.Configure<JwtSettings>(jwtSettingsSection);
 
-//    // Підключення до MySQL
+//    // ГЏВіГ¤ГЄГ«ГѕГ·ГҐГ­Г­Гї Г¤Г® MySQL
 //    var connectionString = configuration.GetConnectionString("DefaultConnection");
 //    services.AddDbContext<MyDbContext>(options =>
 //        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
@@ -311,17 +313,17 @@ void ConfigureMiddleware(WebApplication app)
 //    //    .AddEntityFrameworkStores<MyDbContext>()
 //    //    .AddDefaultTokenProviders();
 
-//    // Додавання сесії
+//    // Г„Г®Г¤Г ГўГ Г­Г­Гї Г±ГҐГ±ВіВї
 //    services.AddSession(options =>
 //    {
 //        options.IdleTimeout = TimeSpan.FromMinutes(30);
 //        options.Cookie.HttpOnly = true;
 //    });
 
-//    // Налаштування автентифікації через JWT
+//    // ГЌГ Г«Г ГёГІГіГўГ Г­Г­Гї Г ГўГІГҐГ­ГІГЁГґВіГЄГ Г¶ВіВї Г·ГҐГ°ГҐГ§ JWT
 //    services.AddAuthentication(options =>
 //    {
-//        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme; // Використання куки для аутентифікації
+//        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme; // Г‚ГЁГЄГ®Г°ГЁГ±ГІГ Г­Г­Гї ГЄГіГЄГЁ Г¤Г«Гї Г ГіГІГҐГ­ГІГЁГґВіГЄГ Г¶ВіВї
 //        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 //    })
 //    .AddCookie()
@@ -330,7 +332,7 @@ void ConfigureMiddleware(WebApplication app)
 //        options.ClientId = configuration["Google:ClientId"];
 //        options.ClientSecret = configuration["Google:ClientSecret"];
 
-//        // Перевірка на наявність ClientId і ClientSecret
+//        // ГЏГҐГ°ГҐГўВіГ°ГЄГ  Г­Г  Г­Г ГїГўГ­ВіГ±ГІГј ClientId Ві ClientSecret
 //        if (string.IsNullOrEmpty(options.ClientId) || string.IsNullOrEmpty(options.ClientSecret))
 //        {
 //            throw new Exception("Google ClientId or ClientSecret is not configured properly.");
@@ -338,14 +340,14 @@ void ConfigureMiddleware(WebApplication app)
 
 //        options.Scope.Add("email");
 //        options.Scope.Add("profile");
-//        options.SaveTokens = true; // Зберігати токени
+//        options.SaveTokens = true; // Г‡ГЎГҐГ°ВіГЈГ ГІГЁ ГІГ®ГЄГҐГ­ГЁ
 //        options.CallbackPath = "/users/google-response";
 
 //        options.Events = new OAuthEvents
 //        {
 //            OnRedirectToAuthorizationEndpoint = context =>
 //            {
-//                // Логування стану перед перенаправленням
+//                // Г‹Г®ГЈГіГўГ Г­Г­Гї Г±ГІГ Г­Гі ГЇГҐГ°ГҐГ¤ ГЇГҐГ°ГҐГ­Г ГЇГ°Г ГўГ«ГҐГ­Г­ГїГ¬
 //                if (context.Properties.Items.TryGetValue("state", out var state))
 //                {
 //                    Console.WriteLine($"OAuth state (redirecting): {state}");
@@ -360,14 +362,14 @@ void ConfigureMiddleware(WebApplication app)
 //            },
 //            OnCreatingTicket = context =>
 //            {
-//                // Логування токена після його створення
+//                // Г‹Г®ГЈГіГўГ Г­Г­Гї ГІГ®ГЄГҐГ­Г  ГЇВіГ±Г«Гї Г©Г®ГЈГ® Г±ГІГўГ®Г°ГҐГ­Г­Гї
 //                Console.WriteLine($"Google OAuth ticket created: {context.AccessToken}");
 //                return Task.CompletedTask;
 //            },
 //            OnRemoteFailure = context =>
 //            {
 //                Console.WriteLine($"OAuth Error: {context.Failure?.Message}");
-//                // Логування для повної помилки
+//                // Г‹Г®ГЈГіГўГ Г­Г­Гї Г¤Г«Гї ГЇГ®ГўГ­Г®Вї ГЇГ®Г¬ГЁГ«ГЄГЁ
 //                Console.WriteLine($"Error: {context.Failure}");
 //                return Task.CompletedTask;
 //            }
@@ -387,35 +389,35 @@ void ConfigureMiddleware(WebApplication app)
 //        };
 //    });
 
-//    // Додавання сервісів
+//    // Г„Г®Г¤Г ГўГ Г­Г­Гї Г±ГҐГ°ГўВіГ±ВіГў
 //    services.AddScoped<IUserService, UserService>();
 //    services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 //    services.AddScoped<SignInManager<User>>();
 
-//    // Додавання сервісів для API контролерів
+//    // Г„Г®Г¤Г ГўГ Г­Г­Гї Г±ГҐГ°ГўВіГ±ВіГў Г¤Г«Гї API ГЄГ®Г­ГІГ°Г®Г«ГҐГ°ВіГў
 //    services.AddControllers();
 
-//    // Додавання Razor Pages
+//    // Г„Г®Г¤Г ГўГ Г­Г­Гї Razor Pages
 //    services.AddRazorPages();
 //}
 
-//// Метод для конфігурації middleware
+//// ГЊГҐГІГ®Г¤ Г¤Г«Гї ГЄГ®Г­ГґВіГЈГіГ°Г Г¶ВіВї middleware
 //void ConfigureMiddleware(WebApplication app)
 //{
-//    // Якщо не в режимі розробки, використовуємо спеціальний обробник помилок
+//    // ГџГЄГ№Г® Г­ГҐ Гў Г°ГҐГ¦ГЁГ¬Ві Г°Г®Г§Г°Г®ГЎГЄГЁ, ГўГЁГЄГ®Г°ГЁГ±ГІГ®ГўГіВєГ¬Г® Г±ГЇГҐГ¶ВіГ Г«ГјГ­ГЁГ© Г®ГЎГ°Г®ГЎГ­ГЁГЄ ГЇГ®Г¬ГЁГ«Г®ГЄ
 //    if (!app.Environment.IsDevelopment())
 //    {
 //        app.UseExceptionHandler("/Error");
 //        app.UseHsts();
 //    }
 
-//    // Додавання використання сесії
+//    // Г„Г®Г¤Г ГўГ Г­Г­Гї ГўГЁГЄГ®Г°ГЁГ±ГІГ Г­Г­Гї Г±ГҐГ±ВіВї
 //    app.UseSession();
 
 //    app.UseCookiePolicy(new CookiePolicyOptions
 //    {
-//        MinimumSameSitePolicy = SameSiteMode.Lax, // або None для кращої сумісності
-//        Secure = CookieSecurePolicy.Always, // обов'язково для HTTPS
+//        MinimumSameSitePolicy = SameSiteMode.Lax, // Г ГЎГ® None Г¤Г«Гї ГЄГ°Г Г№Г®Вї Г±ГіГ¬ВіГ±Г­Г®Г±ГІВі
+//        Secure = CookieSecurePolicy.Always, // Г®ГЎГ®Гў'ГїГ§ГЄГ®ГўГ® Г¤Г«Гї HTTPS
 //    });
 
 //    app.UseHttpsRedirection();
@@ -424,10 +426,10 @@ void ConfigureMiddleware(WebApplication app)
 //    app.UseAuthentication();
 //    app.UseAuthorization();
 
-//    // Забезпечуємо маршрутизацію для Razor Pages
+//    // Г‡Г ГЎГҐГ§ГЇГҐГ·ГіВєГ¬Г® Г¬Г Г°ГёГ°ГіГІГЁГ§Г Г¶ВіГѕ Г¤Г«Гї Razor Pages
 //    app.MapRazorPages();
 
-//    // Маршрутизація для API контролерів
+//    // ГЊГ Г°ГёГ°ГіГІГЁГ§Г Г¶ВіГї Г¤Г«Гї API ГЄГ®Г­ГІГ°Г®Г«ГҐГ°ВіГў
 //    app.MapControllers();
 //}
 
@@ -478,8 +480,8 @@ void ConfigureMiddleware(WebApplication app)
 //    options.ClientSecret = builder.Configuration["Google:ClientSecret"];
 //    options.Scope.Add("email");
 //    options.Scope.Add("profile");
-//    options.SaveTokens = true; // Зберегти токени
-//    options.CallbackPath = "/signin-google"; // URL для повернення після авторизації
+//    options.SaveTokens = true; // Г‡ГЎГҐГ°ГҐГЈГІГЁ ГІГ®ГЄГҐГ­ГЁ
+//    options.CallbackPath = "/signin-google"; // URL Г¤Г«Гї ГЇГ®ГўГҐГ°Г­ГҐГ­Г­Гї ГЇВіГ±Г«Гї Г ГўГІГ®Г°ГЁГ§Г Г¶ВіВї
 //});
 
 
